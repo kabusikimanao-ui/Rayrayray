@@ -1,1 +1,427 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>藪の中 — P2Pオンライン推理ゲーム</title>
+    <!-- P2P通信(WebRTC)を簡単にするためのPeerJSライブラリ -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --card-bg: #2c2c2c;
+            --text-color: #e0e0e0;
+            --accent-color: #8fbc8f; /* 竹林をイメージした緑 */
+            --danger-color: #cd5c5c;
+        }
+        body {
+            font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 1px solid #444;
+        }
+        h1 { text-align: center; color: var(--accent-color); margin-top: 0; letter-spacing: 0.1em;}
+        h2 { border-bottom: 1px solid #555; padding-bottom: 10px; color: #fff; }
+        .screen { display: none; }
+        .screen.active { display: block; }
+        button {
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px 0;
+            width: 100%;
+        }
+        button:hover { opacity: 0.9; }
+        button:disabled { background: #555; color: #999; cursor: not-allowed; }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            background: #111;
+            border: 1px solid #555;
+            color: #fff;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+        textarea { height: 100px; resize: vertical; }
+        .room-info {
+            background: #111;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+            margin: 15px 0;
+            border: 1px dashed var(--accent-color);
+        }
+        .room-id { font-size: 1.5rem; color: var(--accent-color); font-weight: bold; letter-spacing: 2px;}
+        .player-list { list-style: none; padding: 0; }
+        .player-list li { padding: 8px; background: #333; margin: 5px 0; border-radius: 4px; }
+        .testimony { background: #222; padding: 15px; margin: 10px 0; border-left: 4px solid var(--accent-color); border-radius: 0 4px 4px 0;}
+        .role-tag { color: var(--danger-color); font-weight: bold; }
+        .log { font-size: 0.9rem; color: #888; height: 100px; overflow-y: auto; background: #111; padding: 10px; border-radius: 4px;}
+    </style>
+</head>
+<body>
 
+<div class="container">
+    <h1>藪の中</h1>
+    <p style="text-align: center; color: #888;">P2Pオンライン推理ゲーム</p>
+
+    <!-- 1. ログイン画面 -->
+    <div id="screen-login" class="screen active">
+        <h2>名前を入力</h2>
+        <input type="text" id="input-name" placeholder="あなたの名前" maxlength="10">
+        <button onclick="showLobby()">ロビーへ進む</button>
+    </div>
+
+    <!-- 2. ロビー画面 -->
+    <div id="screen-lobby" class="screen">
+        <h2>部屋を作成 / 参加</h2>
+        <div id="host-area">
+            <button onclick="createRoom()">部屋を作成する（ホスト）</button>
+        </div>
+        <div id="room-created-area" style="display:none;">
+            <p>部屋IDを友達に共有してください：</p>
+            <div class="room-info">
+                <div class="room-id" id="display-room-id">----</div>
+            </div>
+            <p>参加者リスト：</p>
+            <ul class="player-list" id="player-list"></ul>
+            <button id="btn-start" onclick="startGame()" disabled>ゲームを開始する</button>
+        </div>
+        <div id="join-area" style="margin-top: 20px; border-top: 1px solid #444; padding-top: 20px;">
+            <p>または、部屋IDを入力して参加：</p>
+            <input type="text" id="input-room-id" placeholder="部屋IDを入力">
+            <button onclick="joinRoom()">部屋に参加する</button>
+        </div>
+        <div class="log" id="system-log"></div>
+    </div>
+
+    <!-- 3. ゲーム画面（証言・投票） -->
+    <div id="screen-game" class="screen">
+        <h2 id="game-phase-title">証言フェーズ</h2>
+        <div id="my-role-info" style="background:#222; padding:10px; border-radius:4px; margin-bottom:15px;"></div>
+        
+        <div id="testimony-area">
+            <p>あなたのキャラクターになりきって、証言を入力してください。</p>
+            <textarea id="input-testimony" placeholder="証言内容..."></textarea>
+            <button onclick="submitTestimony()">証言を提出する</button>
+        </div>
+
+        <div id="voting-area" style="display:none;">
+            <p>全員の証言が出揃いました。誰が真実を語っていると思いますか？（または犯人は？）</p>
+            <div id="testimonies-display"></div>
+            <select id="select-vote" style="width:100%; padding:10px; background:#111; color:#fff; border:1px solid #555; margin: 10px 0;">
+                <option value="">投票先を選択</option>
+            </select>
+            <button onclick="submitVote()">投票する</button>
+        </div>
+
+        <div id="result-area" style="display:none;">
+            <h2>結果発表</h2>
+            <div id="result-display"></div>
+            <button onclick="location.reload()">トップに戻る</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- グローバル変数 ---
+    let myName = "";
+    let peer = null;
+    let isHost = false;
+    let connections = []; // ホスト用: 接続リスト
+    let hostConn = null;  // ゲスト用: ホストへの接続
+    let myRole = "";
+    let roomId = "";
+
+    // キャラクター設定（藪の中）
+    const ROLES = {
+        "tajomaru": { name: "盗賊・多襄丸", prompt: "武士をどうやって倒したか、その勇壮な勝負を語れ。" },
+        "samurai":  { name: "亡霊・武士", prompt: "妻の裏切りと、自分がどうやって死んだかを語れ。" },
+        "wife":     { name: "妻・真砂", prompt: "辱めを受けた後、夫と盗賊の間でどう動いたかを語れ。" },
+        "woodcutter":{ name: "樵", prompt: "藪の中で実際に見た、本当の出来事を語れ。" }
+    };
+    const ROLE_KEYS = Object.keys(ROLES);
+
+    let gameState = {
+        phase: "lobby", // lobby, testimony, voting, result
+        players: {},    // { id: { name, role, testimony, vote } }
+        hostId: ""
+    };
+
+    // --- 画面遷移 ---
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    function showLobby() {
+        myName = document.getElementById('input-name').value.trim();
+        if (!myName) { alert("名前を入力してください"); return; }
+        showScreen('screen-lobby');
+    }
+
+    function log(msg) {
+        const el = document.getElementById('system-log');
+        el.innerHTML += `<div>${msg}</div>`;
+        el.scrollTop = el.scrollHeight;
+    }
+
+    // --- P2P 通信セットアップ ---
+    
+    // ホスト：部屋作成
+    function createRoom() {
+        isHost = true;
+        roomId = "yabu-" + Math.random().toString(36).substr(2, 6);
+        
+        peer = new Peer(roomId);
+        
+        peer.on('open', id => {
+            document.getElementById('host-area').style.display = 'none';
+            document.getElementById('room-created-area').style.display = 'block';
+            document.getElementById('display-room-id').innerText = id;
+            gameState.hostId = id;
+            gameState.players[id] = { name: myName, role: "", testimony: "", vote: "" };
+            updatePlayerList();
+            log("部屋を作成しました。ID: " + id);
+        });
+
+        peer.on('connection', conn => {
+            connections.push(conn);
+            setupConnection(conn);
+        });
+    }
+
+    // ゲスト：部屋参加
+    function joinRoom() {
+        isHost = false;
+        const targetId = document.getElementById('input-room-id').value.trim();
+        if (!targetId) { alert("部屋IDを入力してください"); return; }
+
+        peer = new Peer();
+        peer.on('open', id => {
+            hostConn = peer.connect(targetId);
+            hostConn.on('open', () => {
+                log("部屋に参加しました。");
+                // ホストに自分の情報を送る
+                sendToHost({ type: 'join', name: myName, id: peer.id });
+            });
+        });
+    }
+
+    function setupConnection(conn) {
+        conn.on('data', data => {
+            handleData(conn, data);
+        });
+        conn.on('close', () => {
+            log(conn.metadata?.name + " が退出しました。");
+        });
+    }
+
+    function sendToHost(data) {
+        if (hostConn && hostConn.open) hostConn.send(data);
+    }
+
+    function broadcastToAll(data) {
+        connections.forEach(c => { if(c.open) c.send(data); });
+    }
+
+    // --- データ処理 ---
+    function handleData(conn, data) {
+        if (isHost) {
+            // ホストの処理
+            if (data.type === 'join') {
+                gameState.players[conn.peer] = { name: data.name, role: "", testimony: "", vote: "" };
+                conn.metadata = { name: data.name };
+                log(data.name + " が参加しました。");
+                updatePlayerList();
+                // 最新のゲーム状態を新規参加者に送る
+                conn.send({ type: 'state', state: gameState });
+            } else if (data.type === 'action') {
+                // プレイヤーのアクションを適用
+                if (data.action === 'testimony') {
+                    gameState.players[conn.peer].testimony = data.value;
+                } else if (data.action === 'vote') {
+                    gameState.players[conn.peer].vote = data.value;
+                }
+                checkPhaseCompletion();
+                // 全員の画面を更新するために状態をブロードキャスト
+                broadcastState();
+            }
+        } else {
+            // ゲストの処理
+            if (data.type === 'state') {
+                gameState = data.state;
+                updateGameUI();
+            }
+        }
+    }
+
+    function broadcastState() {
+        broadcastToAll({ type: 'state', state: gameState });
+        updateGameUI(); // ホスト自身のUIも更新
+    }
+
+    // --- UI 更新 ---
+    function updatePlayerList() {
+        const list = document.getElementById('player-list');
+        list.innerHTML = '';
+        const players = Object.values(gameState.players);
+        players.forEach(p => {
+            list.innerHTML += `<li>${p.name} ${p.id === peer.id ? '(あなた)' : ''}</li>`;
+        });
+        
+        const btnStart = document.getElementById('btn-start');
+        btnStart.disabled = players.length < 2; // 2人以上でスタート可能
+    }
+
+    function startGame() {
+        if (!isHost) return;
+        
+        // ロールをランダムに割り当て
+        const players = Object.keys(gameState.players);
+        const shuffledRoles = [...ROLE_KEYS].sort(() => Math.random() - 0.5);
+        
+        players.forEach((pid, index) => {
+            gameState.players[pid].role = shuffledRoles[index % shuffledRoles.length];
+        });
+        
+        gameState.phase = 'testimony';
+        broadcastState();
+    }
+
+    function updateGameUI() {
+        if (gameState.phase === 'lobby') return;
+        
+        showScreen('screen-game');
+        const myData = gameState.players[peer.id];
+        if (!myData) return;
+
+        const roleInfo = ROLES[myData.role];
+        document.getElementById('my-role-info').innerHTML = `
+            <strong>あなたの役割：</strong> <span class="role-tag">${roleInfo.name}</span><br>
+            <small>${roleInfo.prompt}</small>
+        `;
+
+        if (gameState.phase === 'testimony') {
+            document.getElementById('game-phase-title').innerText = "証言フェーズ";
+            document.getElementById('testimony-area').style.display = 'block';
+            document.getElementById('voting-area').style.display = 'none';
+            document.getElementById('result-area').style.display = 'none';
+            
+            if (myData.testimony) {
+                document.getElementById('input-testimony').value = myData.testimony;
+                document.getElementById('input-testimony').disabled = true;
+            }
+        } 
+        else if (gameState.phase === 'voting') {
+            document.getElementById('game-phase-title').innerText = "投票フェーズ";
+            document.getElementById('testimony-area').style.display = 'none';
+            document.getElementById('voting-area').style.display = 'block';
+            document.getElementById('result-area').style.display = 'none';
+
+            // 証言表示
+            const display = document.getElementById('testimonies-display');
+            display.innerHTML = '';
+            Object.values(gameState.players).forEach(p => {
+                const rName = ROLES[p.role].name;
+                display.innerHTML += `
+                    <div class="testimony">
+                        <span class="role-tag">[${rName}]</span> ${p.name}<br>
+                        「${p.testimony || '（証言なし）'}」
+                    </div>
+                `;
+            });
+
+            // 投票選択肢
+            const select = document.getElementById('select-vote');
+            select.innerHTML = '<option value="">投票先を選択</option>';
+            Object.entries(gameState.players).forEach(([pid, p]) => {
+                if (pid !== peer.id) {
+                    select.innerHTML += `<option value="${pid}">${ROLES[p.role].name} (${p.name})</option>`;
+                }
+            });
+
+            if (myData.vote) {
+                select.value = myData.vote;
+                select.disabled = true;
+            }
+        }
+        else if (gameState.phase === 'result') {
+            document.getElementById('game-phase-title').innerText = "結果発表";
+            document.getElementById('testimony-area').style.display = 'none';
+            document.getElementById('voting-area').style.display = 'none';
+            document.getElementById('result-area').style.display = 'block';
+
+            const resDisp = document.getElementById('result-display');
+            resDisp.innerHTML = '<h3>投票結果</h3>';
+            Object.values(gameState.players).forEach(p => {
+                const votedFor = p.vote ? gameState.players[p.vote]?.name : "棄権";
+                resDisp.innerHTML += `<p>${ROLES[p.role].name} (${p.name}) → <strong>${votedFor}</strong> に投票</p>`;
+            });
+        }
+    }
+
+    // --- プレイヤーアクション ---
+    function submitTestimony() {
+        const text = document.getElementById('input-testimony').value.trim();
+        if (!text) { alert("証言を入力してください"); return; }
+        
+        if (isHost) {
+            gameState.players[peer.id].testimony = text;
+            checkPhaseCompletion();
+            broadcastState();
+        } else {
+            sendToHost({ type: 'action', action: 'testimony', value: text });
+        }
+    }
+
+    function submitVote() {
+        const target = document.getElementById('select-vote').value;
+        if (!target) { alert("投票先を選択してください"); return; }
+
+        if (isHost) {
+            gameState.players[peer.id].vote = target;
+            checkPhaseCompletion();
+            broadcastState();
+        } else {
+            sendToHost({ type: 'action', action: 'vote', value: target });
+        }
+    }
+
+    function checkPhaseCompletion() {
+        const players = Object.values(gameState.players);
+        if (gameState.phase === 'testimony') {
+            if (players.every(p => p.testimony)) {
+                gameState.phase = 'voting';
+            }
+        } else if (gameState.phase === 'voting') {
+            if (players.every(p => p.vote)) {
+                gameState.phase = 'result';
+            }
+        }
+    }
+
+</script>
+</body>
+</html>

@@ -4,14 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>藪の中 — P2Pオンライン推理ゲーム</title>
-    <!-- P2P通信(WebRTC)を簡単にするためのPeerJSライブラリ -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root {
             --bg-color: #1a1a1a;
             --card-bg: #2c2c2c;
             --text-color: #e0e0e0;
-            --accent-color: #8fbc8f; /* 竹林をイメージした緑 */
+            --accent-color: #8fbc8f;
             --danger-color: #cd5c5c;
         }
         body {
@@ -52,7 +51,7 @@
         }
         button:hover { opacity: 0.9; }
         button:disabled { background: #555; color: #999; cursor: not-allowed; }
-        input, textarea {
+        input, textarea, select {
             width: 100%;
             padding: 10px;
             margin: 10px 0;
@@ -116,7 +115,7 @@
         <div class="log" id="system-log"></div>
     </div>
 
-    <!-- 3. ゲーム画面（証言・投票） -->
+    <!-- 3. ゲーム画面 -->
     <div id="screen-game" class="screen">
         <h2 id="game-phase-title">証言フェーズ</h2>
         <div id="my-role-info" style="background:#222; padding:10px; border-radius:4px; margin-bottom:15px;"></div>
@@ -128,9 +127,9 @@
         </div>
 
         <div id="voting-area" style="display:none;">
-            <p>全員の証言が出揃いました。誰が真実を語っていると思いますか？（または犯人は？）</p>
+            <p>全員の証言が出揃いました。誰が真実を語っていると思いますか？</p>
             <div id="testimonies-display"></div>
-            <select id="select-vote" style="width:100%; padding:10px; background:#111; color:#fff; border:1px solid #555; margin: 10px 0;">
+            <select id="select-vote">
                 <option value="">投票先を選択</option>
             </select>
             <button onclick="submitVote()">投票する</button>
@@ -145,16 +144,14 @@
 </div>
 
 <script>
-    // --- グローバル変数 ---
     let myName = "";
     let peer = null;
     let isHost = false;
-    let connections = []; // ホスト用: 接続リスト
-    let hostConn = null;  // ゲスト用: ホストへの接続
+    let connections = [];
+    let hostConn = null;
     let myRole = "";
     let roomId = "";
 
-    // キャラクター設定（藪の中）
     const ROLES = {
         "tajomaru": { name: "盗賊・多襄丸", prompt: "武士をどうやって倒したか、その勇壮な勝負を語れ。" },
         "samurai":  { name: "亡霊・武士", prompt: "妻の裏切りと、自分がどうやって死んだかを語れ。" },
@@ -164,12 +161,11 @@
     const ROLE_KEYS = Object.keys(ROLES);
 
     let gameState = {
-        phase: "lobby", // lobby, testimony, voting, result
-        players: {},    // { id: { name, role, testimony, vote } }
+        phase: "lobby",
+        players: {},
         hostId: ""
     };
 
-    // --- 画面遷移 ---
     function showScreen(id) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
@@ -187,9 +183,6 @@
         el.scrollTop = el.scrollHeight;
     }
 
-    // --- P2P 通信セットアップ ---
-    
-    // ホスト：部屋作成
     function createRoom() {
         isHost = true;
         roomId = "yabu-" + Math.random().toString(36).substr(2, 6);
@@ -212,7 +205,6 @@
         });
     }
 
-    // ゲスト：部屋参加
     function joinRoom() {
         isHost = false;
         const targetId = document.getElementById('input-room-id').value.trim();
@@ -223,7 +215,6 @@
             hostConn = peer.connect(targetId);
             hostConn.on('open', () => {
                 log("部屋に参加しました。");
-                // ホストに自分の情報を送る
                 sendToHost({ type: 'join', name: myName, id: peer.id });
             });
         });
@@ -234,7 +225,7 @@
             handleData(conn, data);
         });
         conn.on('close', () => {
-            log(conn.metadata?.name + " が退出しました。");
+            log("接続が切断されました。");
         });
     }
 
@@ -246,30 +237,24 @@
         connections.forEach(c => { if(c.open) c.send(data); });
     }
 
-    // --- データ処理 ---
     function handleData(conn, data) {
         if (isHost) {
-            // ホストの処理
             if (data.type === 'join') {
                 gameState.players[conn.peer] = { name: data.name, role: "", testimony: "", vote: "" };
                 conn.metadata = { name: data.name };
                 log(data.name + " が参加しました。");
                 updatePlayerList();
-                // 最新のゲーム状態を新規参加者に送る
                 conn.send({ type: 'state', state: gameState });
             } else if (data.type === 'action') {
-                // プレイヤーのアクションを適用
                 if (data.action === 'testimony') {
                     gameState.players[conn.peer].testimony = data.value;
                 } else if (data.action === 'vote') {
                     gameState.players[conn.peer].vote = data.value;
                 }
                 checkPhaseCompletion();
-                // 全員の画面を更新するために状態をブロードキャスト
                 broadcastState();
             }
         } else {
-            // ゲストの処理
             if (data.type === 'state') {
                 gameState = data.state;
                 updateGameUI();
@@ -279,10 +264,9 @@
 
     function broadcastState() {
         broadcastToAll({ type: 'state', state: gameState });
-        updateGameUI(); // ホスト自身のUIも更新
+        updateGameUI();
     }
 
-    // --- UI 更新 ---
     function updatePlayerList() {
         const list = document.getElementById('player-list');
         list.innerHTML = '';
@@ -292,13 +276,12 @@
         });
         
         const btnStart = document.getElementById('btn-start');
-        btnStart.disabled = players.length < 2; // 2人以上でスタート可能
+        btnStart.disabled = players.length < 2;
     }
 
     function startGame() {
         if (!isHost) return;
         
-        // ロールをランダムに割り当て
         const players = Object.keys(gameState.players);
         const shuffledRoles = [...ROLE_KEYS].sort(() => Math.random() - 0.5);
         
@@ -340,7 +323,6 @@
             document.getElementById('voting-area').style.display = 'block';
             document.getElementById('result-area').style.display = 'none';
 
-            // 証言表示
             const display = document.getElementById('testimonies-display');
             display.innerHTML = '';
             Object.values(gameState.players).forEach(p => {
@@ -353,7 +335,6 @@
                 `;
             });
 
-            // 投票選択肢
             const select = document.getElementById('select-vote');
             select.innerHTML = '<option value="">投票先を選択</option>';
             Object.entries(gameState.players).forEach(([pid, p]) => {
@@ -382,7 +363,6 @@
         }
     }
 
-    // --- プレイヤーアクション ---
     function submitTestimony() {
         const text = document.getElementById('input-testimony').value.trim();
         if (!text) { alert("証言を入力してください"); return; }
@@ -421,7 +401,6 @@
             }
         }
     }
-
 </script>
 </body>
 </html>

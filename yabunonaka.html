@@ -258,6 +258,17 @@ function actJoin(doc, name, connId, token){
       return { result:{ playerIndex: existingIdx, reconnected:true }, changed:true };
     }
   }
+  // フォールバック：合言葉トークンが一致しなくても(保存領域が使えない端末など)、
+  // 名前が一致していて、なおかつ現在まさに切断中の席があれば、そこへ自動復帰させる。
+  // 新しい別人として席が増える／満員で入れない、という事態を避けるための保険。
+  if(name){
+    const flags = computeConnectedFlags();
+    const candidateIdx = doc.players.findIndex((p,i)=> p.name===name && !flags[i]);
+    if(candidateIdx>=0){
+      if(token) doc.players[candidateIdx].token = token; // 以後は正規のトークンでも復帰できるようにする
+      return { result:{ playerIndex: candidateIdx, reconnected:true }, changed:true };
+    }
+  }
   if(doc.phase!=='lobby') return { error:'この部屋はすでにゲームを開始しています。' };
   if(doc.players.length>=4) return { error:'この部屋は満員です（最大4人）。' };
   const idx = doc.players.length;
@@ -334,8 +345,10 @@ function sweepClosedConnections(){
 // アプリ強制終了・電波切れなど「不意打ちの切断」は WebRTC の close イベントが
 // 発火しないことがあるため、定期的な ping/pong で生存確認し、応答が途絶えた
 // 接続は明示的に close() して既存の切断処理(hostBroadcast経由)へ合流させる。
-const HEARTBEAT_INTERVAL_MS = 4000;
-const HEARTBEAT_STALE_MS = 13000;
+// ただしスマホのブラウザは画面ロックやバックグラウンド化で数秒〜十数秒
+// JavaScriptのタイマー/処理を間引く(節電のため)ことがあるため、猶予は長めに取る。
+const HEARTBEAT_INTERVAL_MS = 5000;
+const HEARTBEAT_STALE_MS = 30000;
 setInterval(()=>{
   if(!isHost || !room) return;
   const now = Date.now();
@@ -351,11 +364,13 @@ setInterval(()=>{
 }, HEARTBEAT_INTERVAL_MS);
 
 function hostHandleRequest(conn, msg){
-  if(msg.type==='pong'){
-    const entry = connections.get(conn.peer);
-    if(entry) entry.lastPong = Date.now();
-    return;
-  }
+  // どんな種類のメッセージであれ、届いたということは接続が生きている証拠なので、
+  // ping/pong 待ちに関係なく生存時刻を更新しておく（実プレイ中の通信そのものが
+  // ハートビート代わりになり、pingの往復に頼らなくて済む場面が増える）。
+  const liveEntry = connections.get(conn.peer);
+  if(liveEntry) liveEntry.lastPong = Date.now();
+
+  if(msg.type==='pong'){ return; }
   let out;
   if(msg.type==='join'){
     out = actJoin(room, msg.payload.name, conn.peer, msg.payload.token);
@@ -411,6 +426,15 @@ function clientHandleMessage(msg){
     if(resolve){ pending.delete(msg.id); resolve({ result: msg.payload, error: msg.error }); }
   }
 }
+
+// スマホでロック解除・アプリ復帰した瞬間に、次のping/pong往復を待たず
+// すぐさま生存信号を送る。バックグラウンド中に処理が間引かれていた分の
+// 遅れを、復帰の一撃で取り戻すのが狙い（ホストからの誤切断判定を防ぐ）。
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState==='visible' && !isHost && hostConn && hostConn.open){
+    try{ hostConn.send({type:'pong', ts:Date.now()}); }catch(e){}
+  }
+});
 
 /* ================= ROOM LIFECYCLE ================= */
 function tryClaimPeerId(id){
@@ -770,14 +794,32 @@ function buildLobbySeatTable(){
 }
 
 function appendLeaveLink(wrap){
-  const uid = Math.random().toString(36).slice(2,8);
+  // 注意: この関数が呼ばれる時点では wrap はまだ document 内に接続されていないことがある
+  // (呼び出し側が後で stage.appendChild(wrap) する構造のため)。document.getElementById は
+  // documentツリーに接続されていない要素を見つけられず null を返すので、それに .onclick を
+  // 代入すると例外が発生し、以降の描画処理が止まって画面が固まる — が、以前のバグの原因。
+  // ここでは要素を直接生成して参照を保持し、getElementByIdに頼らないようにする。
   const p = document.createElement('p');
   p.className='center';
   p.style.cssText='margin-top:18px;';
-  p.innerHTML = `<button class="rules-link" id="midRulesBtn_${uid}">遊び方を見る</button> ・ <button class="btn small" id="midLeaveBtn_${uid}" style="opacity:.6;">退出する</button>`;
+
+  const rulesBtn = document.createElement('button');
+  rulesBtn.className='rules-link';
+  rulesBtn.textContent='遊び方を見る';
+  rulesBtn.onclick = openRulesModal;
+
+  const sep = document.createTextNode(' ・ ');
+
+  const leaveBtn = document.createElement('button');
+  leaveBtn.className='btn small';
+  leaveBtn.style.opacity='.6';
+  leaveBtn.textContent='退出する';
+  leaveBtn.onclick = leaveRoom;
+
+  p.appendChild(rulesBtn);
+  p.appendChild(sep);
+  p.appendChild(leaveBtn);
   wrap.appendChild(p);
-  document.getElementById('midRulesBtn_'+uid).onclick = openRulesModal;
-  document.getElementById('midLeaveBtn_'+uid).onclick = leaveRoom;
 }
 
 /* ================= ALIBI PHASE ================= */

@@ -76,6 +76,240 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
 .score-chip .sc-nums{ color:var(--ink-soft); display:flex; gap:8px; }
 .score-chip.turn{ box-shadow:0 0 0 2px var(--blood) inset; }
 
+/* ===== 円卓（藪の盤面） ===== */
+.grove-table{
+  position:relative;
+  width:100%;
+  max-width:440px;
+  aspect-ratio:1/1;
+  margin:18px auto 26px;
+}
+.grove-table .table-surface{
+  position:absolute;
+  inset:8%;
+  border-radius:50%;
+  background:radial-gradient(circle at 50% 38%, #5c7a4a, #33452a);
+  border:3px solid #2c3d22;
+  box-shadow:inset 0 0 26px rgba(0,0,0,.4), 0 12px 30px rgba(0,0,0,.2);
+}
+.grove-table .table-surface::before{
+  content:'藪';
+  position:absolute;
+  top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  font-family:'Shippori Mincho',serif;
+  font-size:48px;
+  font-weight:800;
+  color:rgba(255,255,255,.08);
+  letter-spacing:.2em;
+  pointer-events:none;
+}
+
+/* 被害者（中央） */
+.grove-table .victim-spot{
+  position:absolute;
+  top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  z-index:3;
+}
+.grove-table .victim-tile{
+  width:70px; height:90px;
+  background:#3a332a;
+  border:2px solid var(--ink);
+  border-radius:8px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  color:var(--paper);
+  font-size:10px;
+  letter-spacing:.2em;
+  box-shadow:0 4px 12px rgba(0,0,0,.4);
+  position:relative;
+}
+.grove-table .victim-tile .v-kanji{
+  font-size:20px;
+  font-weight:700;
+  letter-spacing:.1em;
+  margin-bottom:4px;
+  font-family:'Shippori Mincho',serif;
+}
+.grove-table .victim-tile.revealed{
+  background:var(--paper);
+  color:var(--ink);
+  border-color:var(--blood);
+}
+.grove-table .victim-tile.revealed .v-value{
+  font-size:22px;
+  font-weight:700;
+  color:var(--blood);
+}
+.grove-table .victim-tile.revealed .v-kanji{
+  color:var(--ink-soft);
+  font-size:10px;
+}
+
+/* 容疑者（円周上） */
+.grove-table .suspect-spot{
+  position:absolute;
+  width:100px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+  z-index:2;
+}
+/* 配置位置：上・右下・左下（120度間隔） */
+.grove-table .suspect-spot[data-idx="0"]{
+  top:4%;
+  left:50%;
+  transform:translateX(-50%);
+}
+.grove-table .suspect-spot[data-idx="1"]{
+  top:62%;
+  left:82%;
+  transform:translate(-50%,-50%);
+}
+.grove-table .suspect-spot[data-idx="2"]{
+  top:62%;
+  left:18%;
+  transform:translate(-50%,-50%);
+}
+
+/* 円卓上の容疑者カード */
+.grove-table .grove-card{
+  width:90px;
+  height:130px;
+  background:var(--paper);
+  border:3px solid var(--paper-deep);
+  border-radius:40px 40px 15px 15px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:8px 6px;
+  position:relative;
+  transition:all .3s ease;
+  box-shadow:0 6px 16px rgba(0,0,0,.25);
+}
+.grove-table .grove-card.clickable{ cursor:pointer; user-select:none; }
+.grove-table .grove-card.clickable:active{ transform:scale(0.95); }
+.grove-table .grove-card.peeked{
+  border-color:var(--bamboo);
+  background:#f0f5e8;
+  box-shadow:0 0 0 3px var(--bamboo), 0 6px 16px rgba(79,107,63,.3);
+}
+.grove-table .grove-card.chosen{
+  border-color:var(--blood);
+  background:#f3ead2;
+  box-shadow:0 0 0 4px var(--blood), 0 0 20px rgba(140,47,38,.5);
+  animation:pulse 1.5s ease-in-out infinite;
+}
+.grove-table .grove-card.selected-for-peek{
+  border-color:var(--gold);
+  background:#fff8dc;
+  box-shadow:0 0 0 3px var(--gold), 0 6px 16px rgba(169,129,63,.3);
+}
+.grove-table .grove-card.culprit{
+  border-color:var(--blood);
+  box-shadow:0 0 0 5px var(--blood), 0 0 30px rgba(140,47,38,.6);
+  animation:glow 2s ease-in-out infinite;
+}
+.grove-table .grove-card .g-label{
+  position:absolute;
+  top:-10px;
+  font-size:10px;
+  letter-spacing:.15em;
+  color:var(--ink-soft);
+  background:var(--paper);
+  padding:2px 6px;
+  border:1px solid var(--paper-deep);
+  border-radius:8px;
+  white-space:nowrap;
+}
+.grove-table .grove-card .g-head{
+  width:42px; height:42px;
+  border-radius:50%;
+  background:var(--paper-deep);
+  margin-bottom:6px;
+  border:2px solid var(--ink-soft);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:16px;
+  font-weight:700;
+  color:var(--ink);
+  line-height:1.1;
+}
+.grove-table .grove-card .g-head.is-flip{
+  background:var(--blood);
+  color:#fff;
+  border-color:var(--blood-soft);
+  font-size:12px;
+  box-shadow:0 0 12px rgba(140,47,38,.6);
+  animation:flipGlow 2s ease-in-out infinite;
+  background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,.1) 3px, rgba(255,255,255,.1) 6px);
+}
+.grove-table .grove-card .g-body{
+  width:50px; height:42px;
+  background:var(--paper-dark);
+  border-radius:15px 15px 10px 10px;
+  border:2px solid var(--ink-soft);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:14px;
+  font-weight:600;
+  color:var(--ink-soft);
+}
+.grove-table .grove-card .unseen-badge{
+  position:absolute;
+  top:-6px; right:-6px;
+  font-size:9px;
+  background:var(--blood);
+  color:var(--paper);
+  padding:2px 5px;
+  letter-spacing:.05em;
+  border-radius:8px;
+}
+.grove-table .grove-card .chip-stack{
+  position:absolute;
+  bottom:-10px;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  gap:2px;
+  flex-wrap:wrap;
+  justify-content:center;
+  max-width:100px;
+}
+.grove-table .grove-card .chip-dot{
+  width:18px; height:18px;
+  border-radius:50%;
+  color:#fff;
+  font-size:8px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:700;
+  border:1.5px solid rgba(0,0,0,.25);
+  box-shadow:0 2px 4px rgba(0,0,0,.3);
+}
+
+@keyframes pulse{
+  0%,100%{ box-shadow:0 0 0 4px var(--blood), 0 0 20px rgba(140,47,38,.5); }
+  50%{ box-shadow:0 0 0 6px var(--blood-soft), 0 0 30px rgba(140,47,38,.7); }
+}
+@keyframes flipGlow{
+  0%,100%{ box-shadow:0 0 12px rgba(140,47,38,.6); }
+  50%{ box-shadow:0 0 20px rgba(140,47,38,.9); }
+}
+@keyframes glow{
+  0%,100%{ filter:brightness(1); }
+  50%{ filter:brightness(1.15); }
+}
+
+/* 旧suspect-card（互換用・最終結果画面で使用） */
 .suspects-row{ display:flex; justify-content:center; gap:16px; margin-top:16px; flex-wrap:wrap; }
 .suspect-card{ 
   width:100px; height:160px; 
@@ -87,27 +321,10 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
   transition:all .3s ease;
   box-shadow:0 8px 20px rgba(0,0,0,.15);
 }
-.suspect-card.clickable{ cursor:pointer; user-select:none; }
-.suspect-card.clickable:active{ transform:scale(0.95); }
-.suspect-card.peeked{ 
-  border-color:var(--bamboo); 
-  background:#f0f5e8;
-  box-shadow:0 0 0 3px var(--bamboo), 0 8px 20px rgba(79,107,63,.3);
-}
-.suspect-card.chosen{ 
+.suspect-card.culprit{ 
   border-color:var(--blood); 
-  background:#f3ead2; 
-  box-shadow:0 0 0 4px var(--blood), 0 0 20px rgba(140,47,38,.5);
-  animation:pulse 1.5s ease-in-out infinite;
-}
-.suspect-card.selected-for-peek{
-  border-color:var(--gold);
-  background:#fff8dc;
-  box-shadow:0 0 0 3px var(--gold), 0 8px 20px rgba(169,129,63,.3);
-}
-@keyframes pulse{
-  0%,100%{ box-shadow:0 0 0 4px var(--blood), 0 0 20px rgba(140,47,38,.5); }
-  50%{ box-shadow:0 0 0 6px var(--blood-soft), 0 0 30px rgba(140,47,38,.7); }
+  box-shadow:0 0 0 5px var(--blood), 0 0 30px rgba(140,47,38,.6);
+  animation:glow 2s ease-in-out infinite;
 }
 .suspect-card .head{ 
   width:50px; height:50px; border-radius:50%; 
@@ -127,10 +344,6 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
   animation:flipGlow 2s ease-in-out infinite;
   background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,.1) 3px, rgba(255,255,255,.1) 6px);
 }
-@keyframes flipGlow{
-  0%,100%{ box-shadow:0 0 12px rgba(140,47,38,.6); }
-  50%{ box-shadow:0 0 20px rgba(140,47,38,.9); }
-}
 .suspect-card .body{ 
   width:60px; height:55px; 
   background:var(--paper-dark); 
@@ -148,11 +361,6 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
   border:1px solid var(--paper-deep);
   border-radius:10px;
 }
-.suspect-card .unseen-badge{ 
-  position:absolute; top:-8px; right:-8px; 
-  font-size:10px; background:var(--blood); color:var(--paper); 
-  padding:3px 7px; letter-spacing:.05em; border-radius:10px;
-}
 .suspect-card .chip-stack{ 
   position:absolute; bottom:-12px; left:50%; transform:translateX(-50%);
   display:flex; gap:3px; flex-wrap:wrap; justify-content:center;
@@ -163,23 +371,6 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
   align-items:center; justify-content:center; 
   font-weight:700; border:1.5px solid rgba(0,0,0,.25);
   box-shadow:0 2px 4px rgba(0,0,0,.3);
-}
-.suspect-card.culprit{ 
-  border-color:var(--blood); 
-  box-shadow:0 0 0 5px var(--blood), 0 0 30px rgba(140,47,38,.6);
-  animation:glow 2s ease-in-out infinite;
-}
-@keyframes glow{
-  0%,100%{ filter:brightness(1); }
-  50%{ filter:brightness(1.15); }
-}
-
-.victim-card{ 
-  background:#3a332a; color:var(--paper); 
-  border:2px solid var(--ink); 
-  padding:10px 16px; text-align:center; 
-  font-size:12.5px; letter-spacing:.2em; margin:14px auto;
-  max-width:200px; border-radius:8px;
 }
 
 .wait-panel{ text-align:center; padding:34px 20px; }
@@ -422,9 +613,12 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
 }
 
 @media (max-width: 480px) {
-  .suspect-card{ width:90px; height:145px; }
-  .suspect-card .head{ width:45px; height:45px; font-size:16px; }
-  .suspect-card .body{ width:55px; height:50px; font-size:14px; }
+  .grove-table{ max-width:360px; }
+  .grove-table .grove-card{ width:78px; height:115px; }
+  .grove-table .grove-card .g-head{ width:36px; height:36px; font-size:14px; }
+  .grove-table .grove-card .g-body{ width:44px; height:36px; font-size:12px; }
+  .grove-table .victim-tile{ width:60px; height:78px; }
+  .grove-table .victim-tile .v-kanji{ font-size:16px; }
   .stage{ padding:10px 12px 140px; }
   .btn{ padding:12px 20px; font-size:14px; }
 }
@@ -1079,7 +1273,6 @@ function leaveRoom(){
   isHost=false; peer=null; hostConn=null; connections=new Map(); room=null; roomView=null; myPlayerIndex=-1;
   reqCounter=0; pending=new Map(); turnLocal=null; alibiLocal={round:null,shown:false,values:null};
   chatMessages = [];
-  // clearGameState() は呼ばない → 保存は残る
   ui = { screen:'title', nameInput:'', codeInput:'', customCode:'', useCustomCode:false, expansionChoice:false, joinError:null, createError:null, disconnected:false };
   render();
 }
@@ -1131,6 +1324,120 @@ function restoreGame(savedRoom){
     ui.screen = null;
     render();
   });
+}
+
+// ===== 円卓（藪の盤面）ビルダー =====
+function buildGroveTable(opts){
+  opts = opts || {};
+  const showValues = opts.showValues || false; // 真相解明時はtrue
+  const center = roomView.center;
+  const tl = turnLocal;
+  
+  const wrap = document.createElement('div');
+  wrap.className = 'grove-table';
+  
+  // 円卓の表面
+  const surface = document.createElement('div');
+  surface.className = 'table-surface';
+  wrap.appendChild(surface);
+  
+  // 被害者（中央）
+  const victimSpot = document.createElement('div');
+  victimSpot.className = 'victim-spot';
+  const victimTile = document.createElement('div');
+  victimTile.className = 'victim-tile' + (showValues ? ' revealed' : '');
+  if(showValues && center.victim !== null){
+    const vFlipClass = isFlipValue(center.victim) ? ' is-flip' : '';
+    victimTile.innerHTML = `
+      <div class="v-kanji">${t('victim')}</div>
+      <div class="v-value${vFlipClass}">${formatFlipValue(center.victim)}</div>
+    `;
+  } else {
+    victimTile.innerHTML = `
+      <div class="v-kanji">${currentLang === 'ja' ? '被' : 'V'}</div>
+      <div style="font-size:8px;letter-spacing:.1em;">${currentLang === 'ja' ? '害者' : 'ICTIM'}</div>
+    `;
+  }
+  victimSpot.appendChild(victimTile);
+  wrap.appendChild(victimSpot);
+  
+  // 容疑者3人（円周上）
+  for(let i=0;i<3;i++){
+    const spot = document.createElement('div');
+    spot.className = 'suspect-spot';
+    spot.setAttribute('data-idx', i);
+    
+    const card = document.createElement('div');
+    
+    // 状態の判定
+    const peekedValue = tl && tl.peekedValues && tl.peekedValues[i] !== undefined ? tl.peekedValues[i] : null;
+    const isPeeked = peekedValue !== null;
+    const isChosen = tl && tl.guessChoice === i;
+    const isSelectedForPeek = tl && tl.chosenTwo && tl.chosenTwo.has(i);
+    const isCulprit = showValues && i === roomView.culpritIndex;
+    
+    let classes = 'grove-card';
+    if(isPeeked) classes += ' peeked';
+    if(isChosen) classes += ' chosen';
+    if(isSelectedForPeek) classes += ' selected-for-peek';
+    if(isCulprit) classes += ' culprit';
+    card.className = classes;
+    
+    // カードの中身
+    let headContent = '';
+    let bodyContent = '？';
+    let headClass = '';
+    
+    if(showValues && center.suspects[i] !== null){
+      // 真相解明時：実際の値を表示
+      const val = center.suspects[i];
+      headContent = formatFlipValue(val);
+      bodyContent = currentLang === 'ja' ? '人' : 'P';
+      if(isFlipValue(val)) headClass = ' is-flip';
+    } else if(isPeeked){
+      // プレイヤーが覗き見た時
+      headContent = formatFlipValue(peekedValue);
+      bodyContent = currentLang === 'ja' ? '確認済' : 'Confirmed';
+      if(isFlipValue(peekedValue)) headClass = ' is-flip';
+    }
+    
+    card.innerHTML = `
+      <div class="g-label">${labels[i]}</div>
+      <div class="g-head${headClass}">${headContent}</div>
+      <div class="g-body">${bodyContent}</div>
+      ${roomView.unseenIdx===i?'<div class="unseen-badge">'+t('unseen')+'</div>':''}
+      <div class="chip-stack">${roomView.chipsAt[i].map(pi=>`<span class="chip-dot" style="background:${roomView.players[pi].color}">${escapeHtml(roomView.players[pi].name.slice(0,1))}</span>`).join('')}</div>
+    `;
+    
+    // クリックハンドラ（証言フェーズ用）
+    if(opts.clickable){
+      const curIdx = roomView.turnOrder[roomView.currentPos];
+      const isMyTurn = curIdx === myPlayerIndex;
+      
+      if(opts.clickable === 'peek-select' && isMyTurn && roomView.currentPos===0 && tl && !tl.evidenceSeen && !isPeeked){
+        card.classList.add('clickable');
+        card.onclick = ()=>{
+          if(tl.chosenTwo.has(i)){
+            tl.chosenTwo.delete(i);
+          } else if(tl.chosenTwo.size < 2){
+            tl.chosenTwo.add(i);
+          }
+          render();
+        };
+      } else if(opts.clickable === 'guess' && isMyTurn && tl && tl.evidenceSeen){
+        card.classList.add('clickable');
+        card.onclick = ()=>{
+          tl.guessChoice = i;
+          render();
+        };
+      }
+    }
+    
+    spot.appendChild(card);
+    wrap.appendChild(spot);
+  }
+  
+  return wrap;
 }
 
 // レンダリング関数
@@ -1663,6 +1970,17 @@ function renderTurns(){
     wrap.appendChild(buildPeekedSuspectsPanel());
   }
   
+  // ===== 円卓（藪の盤面） =====
+  let clickableMode = null;
+  if(isMyTurn){
+    if(!tl.evidenceSeen && roomView.currentPos===0){
+      clickableMode = 'peek-select';
+    } else if(tl.evidenceSeen && (tl.guessChoice===null || tl.guessChoice===undefined)){
+      clickableMode = 'guess';
+    }
+  }
+  wrap.appendChild(buildGroveTable({ clickable: clickableMode }));
+
   const p = document.createElement('p');
   p.className='center';
   p.style.cssText='margin-top:18px;';
@@ -1680,48 +1998,6 @@ function renderTurns(){
   p.appendChild(sep);
   p.appendChild(leaveBtn);
   wrap.appendChild(p);
-
-  const victimCard = document.createElement('div');
-  victimCard.className='victim-card';
-  victimCard.textContent = `${currentLang === 'ja' ? '被 害 者' : 'V I C T I M'} （${currentLang === 'ja' ? '伏 せ' : 'Hidden'}）`;
-  wrap.appendChild(victimCard);
-
-  const suspectsRow = document.createElement('div');
-  suspectsRow.className='suspects-row';
-  
-  for(let i=0;i<3;i++){
-    const card = document.createElement('div');
-    
-    const peekedValue = tl.peekedValues && tl.peekedValues[i] !== undefined ? tl.peekedValues[i] : null;
-    const isPeeked = peekedValue !== null;
-    const isChosen = tl.guessChoice===i;
-    const isSelectedForPeek = tl.chosenTwo.has(i);
-    const flipClass = isPeeked && isFlipValue(peekedValue) ? ' is-flip' : '';
-    
-    card.className='suspect-card' + (isPeeked ? ' peeked' : '') + (isChosen ? ' chosen' : '') + (isSelectedForPeek ? ' selected-for-peek' : '');
-    card.innerHTML = `
-      <div class="s-label">${labels[i]}</div>
-      <div class="head${flipClass}">${isPeeked ? formatFlipValue(peekedValue) : ''}</div>
-      <div class="body">${isPeeked ? (currentLang === 'ja' ? '確認済' : 'Confirmed') : '？'}</div>
-      ${roomView.unseenIdx===i?'<div class="unseen-badge">'+(currentLang === 'ja' ? '見なかった' : 'Unseen')+'</div>':''}
-      <div class="chip-stack">${roomView.chipsAt[i].map(pi=>`<span class="chip-dot" style="background:${roomView.players[pi].color}">${escapeHtml(roomView.players[pi].name.slice(0,1))}</span>`).join('')}</div>
-    `;
-    
-    if(isMyTurn && roomView.currentPos===0 && !tl.evidenceSeen && !isPeeked){
-      card.classList.add('clickable');
-      card.onclick = ()=>{
-        if(tl.chosenTwo.has(i)){
-          tl.chosenTwo.delete(i);
-        } else if(tl.chosenTwo.size < 2){
-          tl.chosenTwo.add(i);
-        }
-        render();
-      };
-    }
-    
-    suspectsRow.appendChild(card);
-  }
-  wrap.appendChild(suspectsRow);
 
   if(!isMyTurn){
     const wp = document.createElement('div');
@@ -1743,9 +2019,9 @@ function renderTurns(){
       actionArea.innerHTML = `
         <p style="font-size:13px;color:var(--ink-soft);max-width:420px;margin:0 auto 14px;">
           ${currentLang === 'ja' ? 
-            `あなたは第一発見者。<b>容疑者カードをタッチして</b>、好きな2人の数字を確かめよ。<br>
+            `あなたは第一発見者。<b>円卓上の容疑者カードをタッチして</b>、好きな2人の数字を確かめよ。<br>
             <span style="color:var(--blood); font-weight:600;">残り ${remaining} 人選択可能</span>` :
-            `You are the first detective. <b>Touch suspect cards</b> to check 2 people's numbers.<br>
+            `You are the first detective. <b>Touch suspect cards on the table</b> to check 2 people's numbers.<br>
             <span style="color:var(--blood); font-weight:600;">${remaining} more can be selected</span>`
           }
         </p>
@@ -1813,21 +2089,8 @@ function renderTurns(){
     return;
   }
 
-  suspectsRow.querySelectorAll('.suspect-card').forEach((el,i)=>{
-    if(!el.classList.contains('peeked')){
-      el.classList.add('clickable');
-    }
-    if(tl.guessChoice===i) el.classList.add('chosen');
-    el.onclick = ()=>{ 
-      if(tl.evidenceSeen){
-        tl.guessChoice=i; 
-        render();
-      }
-    };
-  });
-
   if(tl.guessChoice===null || tl.guessChoice===undefined){
-    actionArea.innerHTML = `<p style="font-size:13px;color:var(--ink-soft);">${currentLang === 'ja' ? '誰が犯人だと思うか、上の容疑者をタップしてチップを置け。<b>選択すると光って強調されます</b>。' : 'Tap a suspect above to place your chip on who you think is the culprit. <b>Selection will glow for emphasis</b>.'}</p>`;
+    actionArea.innerHTML = `<p style="font-size:13px;color:var(--ink-soft);">${currentLang === 'ja' ? '誰が犯人だと思うか、円卓上の容疑者をタップしてチップを置け。<b>選択すると光って強調されます</b>。' : 'Tap a suspect on the table to place your chip on who you think is the culprit. <b>Selection will glow for emphasis</b>.'}</p>`;
   } else {
     const b = document.createElement('button');
     b.className='btn primary';
@@ -1858,7 +2121,7 @@ function openRulesModal(){
       
       <h4>${currentLang === 'ja' ? '② 証言フェーズ（手番）' : ' Testimony Phase (Turns)'}</h4>
       <ul>
-        <li><b>${currentLang === 'ja' ? '第一発見者（一番手）' : 'First Detective (1st Player)'}</b>：${currentLang === 'ja' ? '容疑者カードを直接タッチして、好きな2人の数字を覗く。残り1人は「見なかった」として周囲に伝わる（数字自体は非公開）。確認した数字はカード自体に表示され、ターン中ずっと見える。拡張ルール使用時は、被害者と容疑者1人のタイルを入れ替えるかどうかも選べる（数字は公開されない）。最後に、犯人だと思う容疑者1人にチップを置く。' : 'Touch suspect cards directly to peek at 2 people\'s numbers. The remaining 1 is marked as "unseen" to others (number itself hidden). Peeked numbers are displayed on the cards and remain visible throughout the turn. With expansion rule, you can choose whether to swap the victim tile with 1 suspect tile (number not revealed). Finally, place your chip on the suspect you believe is the culprit.'}</li>
+        <li><b>${currentLang === 'ja' ? '第一発見者（一番手）' : 'First Detective (1st Player)'}</b>：${currentLang === 'ja' ? '円卓上の容疑者カードを直接タッチして、好きな2人の数字を覗く。残り1人は「見なかった」として周囲に伝わる（数字自体は非公開）。確認した数字はカード自体に表示され、ターン中ずっと見える。拡張ルール使用時は、被害者と容疑者1人のタイルを入れ替えるかどうかも選べる（数字は公開されない）。最後に、犯人だと思う容疑者1人にチップを置く。' : 'Touch suspect cards on the table directly to peek at 2 people\'s numbers. The remaining 1 is marked as "unseen" to others (number itself hidden). Peeked numbers are displayed on the cards and remain visible throughout the turn. With expansion rule, you can choose whether to swap the victim tile with 1 suspect tile (number not revealed). Finally, place your chip on the suspect you believe is the culprit.'}</li>
         <li><b>${currentLang === 'ja' ? '2番手以降' : '2nd Player Onwards'}</b>：${currentLang === 'ja' ? '直前の人がチップを置いた容疑者を除く、残り2人の数字を確認できる。同じように、犯人だと思う容疑者にチップを置く。' : 'Excluding the suspect where the previous player placed their chip, check the numbers of the remaining 2. Similarly, place your chip on the suspect you believe is the culprit.'}</li>
       </ul>
       <p>${currentLang === 'ja' ? '容疑者を選択すると、カードが光って強調表示されます。全員がチップを置き終えたら、真相解明フェーズに移る。' : 'When you select a suspect, the card glows for emphasis. When everyone places their chips, proceed to the truth revelation phase.'}</p>
@@ -1889,31 +2152,6 @@ function openRulesModal(){
   if(cr) cr.onclick = ()=>{ document.body.removeChild(overlay); };
 }
 
-function openPeekModal(valuesMap, onClose){
-  const overlay = document.createElement('div');
-  overlay.className='modal-overlay';
-  const indices = Object.keys(valuesMap).map(Number).sort();
-  overlay.innerHTML = `
-    <div class="modal-box">
-      <h3>${currentLang === 'ja' ? '確認した証拠' : 'Confirmed Evidence'}</h3>
-      <div class="peek-values">
-        ${indices.map(i=>{
-          const val = valuesMap[i];
-          const flipClass = isFlipValue(val) ? ' is-flip' : '';
-          return `<div class="peek-col"><div class="cap">${labels[i]}</div><div class="peek-value${flipClass}">${formatFlipValue(val)}</div></div>`;
-        }).join('')}
-      </div>
-      <p style="font-size:12px;color:var(--ink-soft);margin-bottom:18px;">${currentLang === 'ja' ? '画面を他の人に見られないよう気をつけて。' : 'Be careful not to let others see your screen.'}</p>
-      <button class="btn primary small" id="closePeek">${currentLang === 'ja' ? '伏せて次へ' : 'Hide & Next'}</button>
-    </div>`;
-  document.body.appendChild(overlay);
-  const cp = document.getElementById('closePeek');
-  if(cp) cp.onclick = ()=>{
-    document.body.removeChild(overlay);
-    onClose();
-  };
-}
-
 function renderReveal(){
   const culprit = roomView.culpritIndex;
   const s = roomView.center.suspects;
@@ -1925,23 +2163,10 @@ function renderReveal(){
 
   const wrap = document.createElement('div');
   wrap.className='fade';
-  wrap.innerHTML = `<div class="round-header"><span>${t('round')} ${roomView.round} ${t('reveal')}</span><span>${t('victim')}：${roomView.center.victim==='blank'? (currentLang === 'ja' ? '白紙' : 'Blank') :formatFlipValue(roomView.center.victim)}</span></div>`;
+  wrap.innerHTML = `<div class="round-header"><span>${t('round')} ${roomView.round} ${t('reveal')}</span></div>`;
 
-  const suspectsRow = document.createElement('div');
-  suspectsRow.className='suspects-row';
-  for(let i=0;i<3;i++){
-    const card = document.createElement('div');
-    const flipClass = isFlipValue(s[i]) ? ' is-flip' : '';
-    card.className='suspect-card'+(i===culprit?' culprit':'');
-    card.innerHTML = `
-      <div class="s-label">${labels[i]}</div>
-      <div class="head${flipClass}">${formatFlipValue(s[i])}</div>
-      <div class="body">${currentLang === 'ja' ? '人' : 'P'}</div>
-      <div class="chip-stack">${roomView.chipsAt[i].map(pi=>`<span class="chip-dot" style="background:${roomView.players[pi].color}">${escapeHtml(roomView.players[pi].name.slice(0,1))}</span>`).join('')}</div>
-    `;
-    suspectsRow.appendChild(card);
-  }
-  wrap.appendChild(suspectsRow);
+  // ===== 円卓（真相解明版） =====
+  wrap.appendChild(buildGroveTable({ showValues: true }));
 
   const explainBox = document.createElement('div');
   explainBox.className='reveal-explain';

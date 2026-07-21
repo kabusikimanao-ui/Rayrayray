@@ -382,7 +382,7 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
 </div>
 
 <div class="chat-panel" id="chatPanel">
-  <div class="chat-header" onclick="toggleChat()">
+  <div class="chat-header" id="chatHeader">
     <span class="chat-header-title" id="chatTitle">チャット</span>
     <span class="chat-toggle">▼</span>
   </div>
@@ -997,18 +997,6 @@ function renderApp(){
   } catch(e) {
     console.error('Render error:', e);
     stage.innerHTML = `<div class="card"><h2>Error</h2><p>An error occurred. Please refresh the page.</p><button class="btn primary" onclick="location.reload()">Reload</button></div>`;
-  }
-}
-
-function toggleChat(){
-  chatCollapsed = !chatCollapsed;
-  const panel = document.getElementById('chatPanel');
-  if(panel){
-    if(chatCollapsed){
-      panel.classList.add('collapsed');
-    } else {
-      panel.classList.remove('collapsed');
-    }
   }
 }
 
@@ -1865,6 +1853,22 @@ function render(){
 function initChat(){
   const input = document.getElementById('chatInput');
   const send = document.getElementById('chatSend');
+  const header = document.getElementById('chatHeader');
+
+  if(header){
+    header.onclick = function(){
+      chatCollapsed = !chatCollapsed;
+      const panel = document.getElementById('chatPanel');
+      if(panel){
+        if(chatCollapsed){
+          panel.classList.add('collapsed');
+        } else {
+          panel.classList.remove('collapsed');
+        }
+      }
+    };
+  }
+  
   if(!input || !send) return;
   
   send.onclick = ()=>{

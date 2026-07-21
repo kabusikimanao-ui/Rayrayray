@@ -16,13 +16,12 @@
   --p0:#8c2f26; --p1:#2c4a6b; --p2:#4f6b3f; --p3:#6b4f8c; --p4:#8b4513;
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-html,body{margin:0;padding:0;}
+html,body{margin:0;padding:0; overflow-x:hidden;}
 body{
   background:linear-gradient(180deg,#f1e9d2 0%, #e6dab7 45%, #d9caa0 100%);
   color:var(--ink); font-family:'Zen Old Mincho','Shippori Mincho',serif; min-height:100vh;
-  overflow-x:hidden;
 }
-.stage{ max-width:800px; margin:0 auto; padding:20px 16px 100px; }
+.stage{ max-width:800px; margin:0 auto; padding:20px 16px 120px; min-height:100vh; }
 h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
 .btn{
   font-family:'Shippori Mincho',serif; border:1px solid var(--ink); background:transparent; color:var(--ink);
@@ -34,7 +33,6 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
 .btn.primary{ border-color:var(--blood); color:var(--blood); }
 .btn.primary:hover{ background:var(--blood); color:var(--paper); }
 .btn.small{ padding:10px 18px; font-size:13px; min-height:40px; }
-.btn.icon-btn{ padding:8px 12px; min-height:36px; font-size:12px; }
 .row{ display:flex; gap:10px; flex-wrap:wrap; }
 .center{ text-align:center; }
 .err-text{ color:var(--blood); font-size:12.5px; margin-top:8px; }
@@ -314,7 +312,6 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
 .fade{ animation:f .4s ease both; }
 @keyframes f{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
 
-/* チャットパネル - 折りたたみ可能 */
 .chat-panel{
   position:fixed; bottom:0; left:0; right:0;
   background:var(--paper); border-top:2px solid var(--paper-deep);
@@ -358,7 +355,6 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
 .chat-input{ flex:1; padding:8px 12px; border:1px solid var(--paper-deep); background:#fff; border-radius:4px; font-family:inherit; font-size:13px; }
 .chat-send{ padding:8px 16px; background:var(--bamboo); color:#fff; border:none; border-radius:4px; cursor:pointer; font-family:inherit; }
 
-/* 言語切り替えボタン */
 .lang-switch{
   position:fixed; top:10px; right:10px;
   z-index:60;
@@ -369,7 +365,6 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
   font-family:inherit; font-size:12px;
 }
 
-/* モバイル用メディア queries */
 @media (max-width: 480px) {
   .suspect-card{ width:90px; height:145px; }
   .suspect-card .head{ width:45px; height:45px; font-size:16px; }
@@ -382,26 +377,27 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
 <body>
 <div class="stage" id="stage"></div>
 
-<!-- 言語切り替え -->
 <div class="lang-switch">
-  <button class="lang-btn" id="langBtn" onclick="toggleLanguage()">English</button>
+  <button class="lang-btn" id="langBtn">English</button>
 </div>
 
-<!-- チャットパネル -->
 <div class="chat-panel" id="chatPanel">
   <div class="chat-header" onclick="toggleChat()">
-    <span class="chat-header-title" data-i18n="chat">チャット</span>
+    <span class="chat-header-title" id="chatTitle">チャット</span>
     <span class="chat-toggle">▼</span>
   </div>
   <div class="chat-messages" id="chatMessages"></div>
   <div class="chat-input-row">
     <input type="text" class="chat-input" id="chatInput" placeholder="メッセージを入力..." maxlength="100">
-    <button class="chat-send" id="chatSend" data-i18n="send">送信</button>
+    <button class="chat-send" id="chatSend">送信</button>
   </div>
 </div>
 
 <script>
-// 多言語対応
+(function(){
+// 言語設定
+let currentLang = 'ja';
+
 const i18n = {
   ja: {
     chat: 'チャット',
@@ -420,7 +416,6 @@ const i18n = {
     back: '戻る',
     start: '捜査を開始する',
     waiting: 'ホストの開始を待っています',
-    waitingFor: 'を確認中',
     confirm: '確認完了',
     viewEvidence: '証拠を確認する',
     next: '決定して次の人へ',
@@ -446,32 +441,7 @@ const i18n = {
     reconnect: '部屋番号を入力し直す',
     minimumPlayers: '最低2人集まると開始できます',
     maxPlayers: '最大5人',
-    flip5: '「↓5↑」は特別な数字（flip）です',
-    rules: {
-      title: '遊び方 — の中',
-      overview: '概要',
-      overviewText: '竹林で一体の骸が見つかった。現場には「被害者」1枚と「容疑者」3枚(容疑者A・B・C)の数字タイルが伏せられている。プレイヤーは2〜5人。全員が少しずつ違う手がかりを持ち寄り、証言を重ねながら「本当の犯人」を推理する。',
-      alibiPhase: ' アリバイ確認フェーズ',
-      alibiText: '各ラウンドの最初に、現場の4枚とは別の「事件と無関係な人物」のタイルが、自分と隣の人にそれぞれ配られる。両方を確認すると、「少なくともこの2つの数字は容疑者・被害者には含まれない」という除外情報が手に入る。このカードはターン中ずっと画面に表示され続けるので、忘れません。全員が確認を終えると次のフェーズへ進む。',
-      testimonyPhase: ' 証言フェーズ（手番）',
-      firstDetective: '第一発見者（一番手）',
-      firstDetectiveText: '容疑者カードを直接タッチして、好きな2人の数字を覗く。残り1人は「見なかった」として周囲に伝わる（数字自体は非公開）。確認した数字はカード自体に表示され、ターン中ずっと見える。拡張ルール使用時は、被害者と容疑者1人のタイルを入れ替えるかどうかも選べる（数字は公開されない）。最後に、犯人だと思う容疑者1人にチップを置く。',
-      otherPlayers: '2番手以降',
-      otherPlayersText: '直前の人がチップを置いた容疑者を除く、残り2人の数字を確認できる。同じように、犯人だと思う容疑者にチップを置く。',
-      highlight: '容疑者を選択すると、カードが光って強調表示されます。全員がチップを置き終えたら、真相解明フェーズに移る。',
-      culpritRule: '③ 真犯人の見分け方',
-      hasFive: '容疑者3人の中に「↓5↑」がいる場合 → 最も小さい数字の容疑者が真犯人。',
-      noFive: '「↓5↑」がいない場合 → 最も大きい数字の容疑者が真犯人。',
-      noCulprit: '3人とも白紙の場合 → 犯人なし（ありえない組み合わせ）。',
-      flipNote: '「↓5↑」は特別な数字（flip）です。赤く光って表示され、ゲームの勝敗を大きく左右します。',
-      chipSettlement: '④ チップの精算',
-      correctGuess: '真犯人にチップを置いていた人は、チップが無事に戻ってくる。',
-      wrongGuess: '外れた容疑者にチップを置いていた人たちは、全員「手持ち」を1枚失う。さらに、その山に最後にチップを置いた人が、山にあったチップ全部を「失敗チップ」としてまとめて引き取る。',
-      endGame: ' 終了と勝敗',
-      endGameText: 'ラウンド終了時に、誰かの「失敗チップ」が8枚以上、または「手持ち」が0枚になっていたら、そこで捜査終了。「失敗チップ」が最も少ない人が勝者。そうでなければ、次のラウンドへ進む（第一発見者は一人ずつ交代する）。',
-      note: 'ホストの端末がゲーム全体の進行を管理し、他の人には見せてよい情報だけを送るので、隠すべき数字は自分の画面にしか表示されません。',
-      close: '閉じる'
-    }
+    flip5: '「↓5↑」は特別な数字（flip）です'
   },
   en: {
     chat: 'Chat',
@@ -490,7 +460,6 @@ const i18n = {
     back: 'Back',
     start: 'Start Investigation',
     waiting: 'Waiting for host to start',
-    waitingFor: 'Waiting for',
     confirm: 'Confirm',
     viewEvidence: 'View Evidence',
     next: 'Confirm & Next Player',
@@ -516,68 +485,30 @@ const i18n = {
     reconnect: 'Re-enter Room Code',
     minimumPlayers: 'Minimum 2 players required',
     maxPlayers: 'Max 5 players',
-    flip5: '"↓5↑" is a special number (flip)',
-    rules: {
-      title: 'How to Play — In a Grove',
-      overview: 'Overview',
-      overviewText: 'A corpse was found in a bamboo grove. At the scene are 1 "Victim" tile and 3 "Suspect" tiles (Suspects A, B, C) placed face down. 2-5 players work together, each gathering different clues and sharing testimonies to deduce the "true culprit".',
-      alibiPhase: '① Alibi Check Phase',
-      alibiText: 'At the start of each round, tiles of "people unrelated to the case" are dealt to you and your neighbor. By checking both, you gain exclusion information that "at least these 2 numbers are not among the suspects or victim". These cards remain displayed throughout your turn so you won\'t forget. When everyone finishes checking, proceed to the next phase.',
-      testimonyPhase: '② Testimony Phase (Turns)',
-      firstDetective: 'First Detective (1st Player)',
-      firstDetectiveText: 'Touch suspect cards directly to peek at 2 people\'s numbers. The remaining 1 is marked as "unseen" to others (number itself hidden). Peeked numbers are displayed on the cards and remain visible throughout the turn. With expansion rule, you can choose whether to swap the victim tile with 1 suspect tile (number not revealed). Finally, place your chip on the suspect you believe is the culprit.',
-      otherPlayers: '2nd Player Onwards',
-      otherPlayersText: 'Excluding the suspect where the previous player placed their chip, check the numbers of the remaining 2. Similarly, place your chip on the suspect you believe is the culprit.',
-      highlight: 'When you select a suspect, the card glows for emphasis. When everyone places their chips, proceed to the truth revelation phase.',
-      culpritRule: '③ Identifying the True Culprit',
-      hasFive: 'If "↓5↑" is among the 3 suspects → The suspect with the smallest number is the true culprit.',
-      noFive: 'If "↓5↑" is not present → The suspect with the largest number is the true culprit.',
-      noCulprit: 'If all 3 are blank → No culprit (impossible combination).',
-      flipNote: '"↓5↑" is a special number (flip). It glows red and greatly affects the game outcome.',
-      chipSettlement: '④ Chip Settlement',
-      correctGuess: 'Players who placed chips on the true culprit get their chips back safely.',
-      wrongGuess: 'Players who placed chips on wrong suspects each lose 1 "hand" chip. Furthermore, the person who placed the last chip on that pile takes all chips from that pile as "failure chips".',
-      endGame: '⑤ End Game & Victory',
-      endGameText: 'At round end, if anyone has 8 or more "failure chips" or 0 "hand" chips, the investigation ends. The player with the fewest "failure chips" wins. Otherwise, proceed to the next round (first detective rotates).',
-      note: 'The host\'s device manages the entire game progression and only sends information that should be shown to others, so hidden numbers only appear on your own screen.',
-      close: 'Close'
-    }
+    flip5: '"↓5↑" is a special number (flip)'
   }
 };
 
-let currentLang = 'ja';
-
-function toggleLanguage() {
-  currentLang = currentLang === 'ja' ? 'en' : 'ja';
-  document.getElementById('langBtn').textContent = currentLang === 'ja' ? 'English' : '日本語';
-  document.documentElement.lang = currentLang;
-  updateTexts();
-  render();
-}
-
 function t(key) {
-  const keys = key.split('.');
-  let obj = i18n[currentLang];
-  for (const k of keys) {
-    obj = obj[k];
+  try {
+    const keys = key.split('.');
+    let obj = i18n[currentLang];
+    for (const k of keys) {
+      if (obj && obj[k] !== undefined) {
+        obj = obj[k];
+      } else {
+        return key;
+      }
+    }
+    return obj || key;
+  } catch(e) {
+    return key;
   }
-  return obj || key;
-}
-
-function updateTexts() {
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.getAttribute('data-i18n');
-    el.textContent = t(key);
-  });
-  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-    const key = el.getAttribute('data-i18n-placeholder');
-    el.placeholder = t(key);
-  });
 }
 
 const PLAYER_COLORS = ['#8c2f26','#2c4a6b','#4f6b3f','#6b4f8c','#8b4513'];
 const stage = document.getElementById('stage');
-const labels = currentLang === 'ja' ? ['容疑者 A','容疑者 B','容疑者 C'] : ['Suspect A','Suspect B','Suspect C'];
+let labels = ['容疑者 A','容疑者 B','容疑者 C'];
 const PeerCtor = (typeof window!=='undefined' && window.Peer) ? window.Peer : (typeof Peer!=='undefined'? Peer : null);
 
 let isHost = false;
@@ -610,13 +541,23 @@ function genCode(){
   let s=''; for(let i=0;i<4;i++) s+=chars[Math.floor(Math.random()*chars.length)];
   return s;
 }
-function shuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+function shuffle(arr){ 
+  const a=arr.slice(); 
+  for(let i=a.length-1;i>0;i--){ 
+    const j=Math.floor(Math.random()*(i+1)); 
+    [a[i],a[j]]=[a[j],a[i]]; 
+  } 
+  return a; 
+}
+
 function freshDeckValues(n){ 
   let vals=[2,3,4,5,6,7,8,'blank']; 
   if(n===2) vals=[3,4,5,6,7,'blank'];
   else if(n===3) vals=vals.filter(v=>v!==2);
   return vals; 
 }
+
 function computeCulprit(suspects){
   const numeric = suspects.map((v,i)=>({v,i})).filter(x=>x.v!=='blank');
   const hasFive = numeric.some(x=>x.v===5);
@@ -625,6 +566,7 @@ function computeCulprit(suspects){
   return pick.i;
 }
 
+// ゲーム状態の構築
 function buildRoundState(doc){
   const n = doc.players.length;
   const deck = shuffle(freshDeckValues(n));
@@ -679,6 +621,7 @@ function computeConnectedFlags(){
   connections.forEach(({conn, playerIndex})=>{ if(conn.open) flags[playerIndex]=true; });
   return flags;
 }
+
 function redact(r){
   const clone = JSON.parse(JSON.stringify(r));
   const showCenter = clone.phase==='reveal' || clone.phase==='final';
@@ -850,9 +793,14 @@ function sendToHost(type, payload){
   return new Promise((resolve)=>{
     const id = ++reqCounter;
     pending.set(id, resolve);
-    hostConn.send({ type, id, payload });
+    if(hostConn && hostConn.open){
+      hostConn.send({ type, id, payload });
+    } else {
+      resolve({ error: 'Not connected' });
+    }
   });
 }
+
 const Net = {
   peek(indices){ return isHost ? hostSelfAction('peek',{indices}) : sendToHost('peek',{indices}); },
   alibi(){ return isHost ? hostSelfAction('alibi',{}) : sendToHost('alibi',{}); },
@@ -900,9 +848,13 @@ document.addEventListener('visibilitychange', ()=>{
 function tryClaimPeerId(id){
   return new Promise(resolve=>{
     let settled=false;
-    const p = new PeerCtor(id);
-    p.on('open', ()=>{ if(settled) return; settled=true; resolve(p); });
-    p.on('error', (err)=>{ if(settled) return; settled=true; try{ p.destroy(); }catch(e){} resolve(null); });
+    try {
+      const p = new PeerCtor(id);
+      p.on('open', ()=>{ if(settled) return; settled=true; resolve(p); });
+      p.on('error', (err)=>{ if(settled) return; settled=true; try{ p.destroy(); }catch(e){} resolve(null); });
+    } catch(e) {
+      resolve(null);
+    }
   });
 }
 
@@ -965,27 +917,33 @@ function joinRoom(){
   ui.screen='connecting'; ui.joinError=null; ui.disconnected=false; render();
   isHost = false;
   const token = getOrCreateToken(code);
-  peer = new PeerCtor();
-  peer.on('open', ()=>{
-    hostConn = peer.connect('yabu-'+code, { reliable:true });
-    hostConn.on('open', async ()=>{
-      const { result, error } = await sendToHost('join', { name, token });
-      if(error){ ui.screen='join'; ui.joinError=error; try{peer.destroy();}catch(e){} render(); return; }
-      myPlayerIndex = result.playerIndex;
-      ui.screen = null;
+  try {
+    peer = new PeerCtor();
+    peer.on('open', ()=>{
+      hostConn = peer.connect('yabu-'+code, { reliable:true });
+      hostConn.on('open', async ()=>{
+        const { result, error } = await sendToHost('join', { name, token });
+        if(error){ ui.screen='join'; ui.joinError=error; try{peer.destroy();}catch(e){} render(); return; }
+        myPlayerIndex = result.playerIndex;
+        ui.screen = null;
+        render();
+      });
+      hostConn.on('data', clientHandleMessage);
+      hostConn.on('close', ()=>{ if(roomView){ ui.disconnected=true; render(); } });
+    });
+    peer.on('error', err=>{
+      if(ui.screen!=='connecting') return;
+      ui.screen='join';
+      ui.joinError = (err && err.type==='peer-unavailable') ? 
+        (currentLang === 'ja' ? 'その部屋は見つかりません。番号を確認してください。' : 'Room not found. Please check the code.') : 
+        (currentLang === 'ja' ? '接続エラーが発生しました。' : 'Connection error occurred.');
       render();
     });
-    hostConn.on('data', clientHandleMessage);
-    hostConn.on('close', ()=>{ if(roomView){ ui.disconnected=true; render(); } });
-  });
-  peer.on('error', err=>{
-    if(ui.screen!=='connecting') return;
+  } catch(e) {
     ui.screen='join';
-    ui.joinError = (err && err.type==='peer-unavailable') ? 
-      (currentLang === 'ja' ? 'その部屋は見つかりません。番号を確認してください。' : 'Room not found. Please check the code.') : 
-      (currentLang === 'ja' ? '接続エラーが発生しました。' : 'Connection error occurred.');
+    ui.joinError = currentLang === 'ja' ? '接続エラーが発生しました。' : 'Connection error occurred.';
     render();
-  });
+  }
 }
 
 function leaveRoom(){
@@ -1022,18 +980,24 @@ function hostPlayAgain(){
   hostBroadcast();
 }
 
+// レンダリング関数
 function renderApp(){
-  stage.innerHTML='';
-  if(ui.disconnected){ renderDisconnected(); return; }
-  if(ui.screen==='title'){ renderTitle(); return; }
-  if(ui.screen==='create'){ renderCreate(); return; }
-  if(ui.screen==='join'){ renderJoin(); return; }
-  if(ui.screen==='connecting' || !roomView){ renderConnecting(); return; }
-  if(roomView.phase==='lobby'){ renderLobby(); return; }
-  if(roomView.phase==='alibi'){ renderAlibi(); return; }
-  if(roomView.phase==='turns'){ renderTurns(); return; }
-  if(roomView.phase==='reveal'){ renderReveal(); return; }
-  if(roomView.phase==='final'){ renderFinal(); return; }
+  try {
+    stage.innerHTML='';
+    if(ui.disconnected){ renderDisconnected(); return; }
+    if(ui.screen==='title'){ renderTitle(); return; }
+    if(ui.screen==='create'){ renderCreate(); return; }
+    if(ui.screen==='join'){ renderJoin(); return; }
+    if(ui.screen==='connecting' || !roomView){ renderConnecting(); return; }
+    if(roomView.phase==='lobby'){ renderLobby(); return; }
+    if(roomView.phase==='alibi'){ renderAlibi(); return; }
+    if(roomView.phase==='turns'){ renderTurns(); return; }
+    if(roomView.phase==='reveal'){ renderReveal(); return; }
+    if(roomView.phase==='final'){ renderFinal(); return; }
+  } catch(e) {
+    console.error('Render error:', e);
+    stage.innerHTML = `<div class="card"><h2>Error</h2><p>An error occurred. Please refresh the page.</p><button class="btn primary" onclick="location.reload()">Reload</button></div>`;
+  }
 }
 
 function toggleChat(){
@@ -1049,23 +1013,36 @@ function toggleChat(){
 }
 
 function renderChat(){
-  const panel = document.getElementById('chatPanel');
-  const messages = document.getElementById('chatMessages');
-  if(!panel || !messages) return;
-  
-  if(roomView && (roomView.phase !== 'lobby' || chatMessages.length > 0)){
-    panel.style.display = 'block';
-  } else {
-    panel.style.display = 'none';
-    return;
+  try {
+    const panel = document.getElementById('chatPanel');
+    const messages = document.getElementById('chatMessages');
+    const chatTitle = document.getElementById('chatTitle');
+    const chatInput = document.getElementById('chatInput');
+    const chatSend = document.getElementById('chatSend');
+    
+    if(!panel || !messages) return;
+    
+    if(chatTitle) chatTitle.textContent = t('chat');
+    if(chatInput) chatInput.placeholder = currentLang === 'ja' ? 'メッセージを入力...' : 'Enter message...';
+    if(chatSend) chatSend.textContent = t('send');
+    
+    if(roomView && (roomView.phase !== 'lobby' || chatMessages.length > 0)){
+      panel.style.display = 'block';
+    } else {
+      panel.style.display = 'none';
+      return;
+    }
+    
+    messages.innerHTML = chatMessages.map(m => 
+      `<div class="chat-message"><span class="chat-name">${m.name}:</span> <span class="chat-text">${m.text}</span></div>`
+    ).join('');
+    messages.scrollTop = messages.scrollHeight;
+  } catch(e) {
+    console.error('Chat render error:', e);
   }
-  
-  messages.innerHTML = chatMessages.map(m => 
-    `<div class="chat-message"><span class="chat-name">${m.name}:</span> <span class="chat-text">${m.text}</span></div>`
-  ).join('');
-  messages.scrollTop = messages.scrollHeight;
 }
 
+// UI レンダリング関数（簡略化）
 function renderDisconnected(){
   const wrap = document.createElement('div');
   wrap.className='title-screen fade';
@@ -1093,7 +1070,7 @@ function renderTitle(){
   wrap.innerHTML = `
     <div class="title-eyebrow">P2P ${currentLang === 'ja' ? 'オンライン推理ゲーム' : 'Online Deduction Game'}</div>
     <div class="seal">${currentLang === 'ja' ? '検' : 'INV'}</div>
-    <h1 class="title-main">${currentLang === 'ja' ? 'の中' : 'In a Grove'}</h1>
+    <h1 class="title-main">${currentLang === 'ja' ? '藪の中' : 'In a Grove'}</h1>
     <p class="title-sub">${currentLang === 'ja' ? '竹林に横たわる一体の骸。容疑者は三人。<br>2〜5人で遊ぶ新版' : 'A corpse lies in the bamboo grove. Three suspects.<br>New version for 2-5 players'}</p>
     <div class="notice-box">
       ${currentLang === 'ja' ? 
@@ -1108,18 +1085,16 @@ function renderTitle(){
       }
     </div>
     <div class="row" style="justify-content:center;">
-      <button class="btn primary" id="toCreate" data-i18n="createRoom">${t('createRoom')}</button>
-      <button class="btn" id="toJoin" data-i18n="joinRoom">${t('joinRoom')}</button>
+      <button class="btn primary" id="toCreate">${t('createRoom')}</button>
+      <button class="btn" id="toJoin">${t('joinRoom')}</button>
     </div>
-    <div class="center" style="margin-top:16px;"><button class="rules-link" id="titleRulesBtn" data-i18n="howToPlay">${t('howToPlay')}</button></div>
+    <div class="center" style="margin-top:16px;"><button class="rules-link" id="titleRulesBtn">${t('howToPlay')}</button></div>
   `;
   stage.appendChild(wrap);
-  const c1 = document.getElementById('toCreate');
-  const c2 = document.getElementById('toJoin');
-  const c3 = document.getElementById('titleRulesBtn');
-  if(c1) c1.onclick = ()=>{ ui.screen='create'; render(); };
-  if(c2) c2.onclick = ()=>{ ui.screen='join'; render(); };
-  if(c3) c3.onclick = openRulesModal;
+  
+  document.getElementById('toCreate').onclick = ()=>{ ui.screen='create'; render(); };
+  document.getElementById('toJoin').onclick = ()=>{ ui.screen='join'; render(); };
+  document.getElementById('titleRulesBtn').onclick = openRulesModal;
 }
 
 function renderConnecting(){
@@ -1136,10 +1111,10 @@ function renderCreate(){
     <div class="card">
       <h2>${currentLang === 'ja' ? '部屋を作る' : 'Create Room'}</h2>
       <p>${currentLang === 'ja' ? 'あなたの端末がこの部屋の進行役になります。2〜5人集まったら、あなたが開始ボタンを押してゲームを始めます。<b>ゲームが終わるまで、このタブを閉じないでください。</b>' : 'Your device will host this room. When 2-5 players gather, press the start button to begin. <b>Do not close this tab until the game ends.</b>'}</p>
-      <label style="font-size:12px;color:var(--ink-soft);" data-i18n="enterName">${t('enterName')}</label>
+      <label style="font-size:12px;color:var(--ink-soft);">${t('enterName')}</label>
       <input class="form-input" id="nameInput" placeholder="${currentLang === 'ja' ? '例：探偵1' : 'Ex: Detective1'}" value="${ui.nameInput}">
       
-      <label style="font-size:12px;color:var(--ink-soft);" data-i18n="customRoomCode">${t('customRoomCode')}</label>
+      <label style="font-size:12px;color:var(--ink-soft);">${t('customRoomCode')}</label>
       <div style="display:flex; gap:10px; align-items:center; margin-bottom:12px;">
         <label style="font-size:13px; display:flex; align-items:center; gap:6px; cursor:pointer;">
           <input type="checkbox" id="useCustomCode" ${ui.useCustomCode?'checked':''} style="width:18px; height:18px;">
@@ -1148,38 +1123,34 @@ function renderCreate(){
       </div>
       ${ui.useCustomCode ? `<input class="form-input code-input" id="customCodeInput" maxlength="6" placeholder="${currentLang === 'ja' ? '例：MYROOM' : 'Ex: MYROOM'}" value="${ui.customCode}" style="text-transform:uppercase;">` : ''}
       
-      <label style="font-size:12px;color:var(--ink-soft);" data-i18n="expansionRule">${t('expansionRule')}</label>
+      <label style="font-size:12px;color:var(--ink-soft);">${t('expansionRule')}</label>
       <div class="count-row" id="expRow"></div>
       <div class="center">
-        <button class="btn primary" id="doCreate" data-i18n="create">${t('create')}</button>
+        <button class="btn primary" id="doCreate">${t('create')}</button>
       </div>
       ${ui.createError?`<div class="err-text center">${ui.createError}</div>`:''}
-      <div class="center" style="margin-top:14px;"><button class="rules-link" id="createRulesBtn" data-i18n="howToPlay">${t('howToPlay')}</button> ・ <button class="btn small" id="back1" data-i18n="back">${t('back')}</button></div>
+      <div class="center" style="margin-top:14px;"><button class="rules-link" id="createRulesBtn">${t('howToPlay')}</button> ・ <button class="btn small" id="back1">${t('back')}</button></div>
     </div>
   `;
   stage.appendChild(wrap);
-  const crb = document.getElementById('createRulesBtn');
-  const ni = document.getElementById('nameInput');
-  const ucc = document.getElementById('useCustomCode');
+  
+  document.getElementById('nameInput').oninput = e=>{ ui.nameInput=e.target.value; };
+  document.getElementById('useCustomCode').onchange = e=>{ ui.useCustomCode = e.target.checked; render(); };
   const cci = document.getElementById('customCodeInput');
-  const dc = document.getElementById('doCreate');
-  const b1 = document.getElementById('back1');
-  if(crb) crb.onclick = openRulesModal;
-  if(ni) ni.oninput = e=>{ ui.nameInput=e.target.value; };
-  if(ucc) ucc.onchange = e=>{ ui.useCustomCode = e.target.checked; render(); };
   if(cci) cci.oninput = e=>{ ui.customCode=e.target.value.toUpperCase(); };
+  
   const expRow = document.getElementById('expRow');
-  if(expRow){
-    [{v:false,label:t('dontUse')},{v:true,label:t('use')}].forEach(opt=>{
-      const b=document.createElement('button');
-      b.className='count-btn'+(ui.expansionChoice===opt.v?' active':'');
-      b.textContent=opt.label;
-      b.onclick=()=>{ ui.expansionChoice=opt.v; render(); };
-      expRow.appendChild(b);
-    });
-  }
-  if(dc) dc.onclick = createRoom;
-  if(b1) b1.onclick = ()=>{ ui.screen='title'; render(); };
+  [{v:false,label:t('dontUse')},{v:true,label:t('use')}].forEach(opt=>{
+    const b=document.createElement('button');
+    b.className='count-btn'+(ui.expansionChoice===opt.v?' active':'');
+    b.textContent=opt.label;
+    b.onclick=()=>{ ui.expansionChoice=opt.v; render(); };
+    expRow.appendChild(b);
+  });
+  
+  document.getElementById('doCreate').onclick = createRoom;
+  document.getElementById('back1').onclick = ()=>{ ui.screen='title'; render(); };
+  document.getElementById('createRulesBtn').onclick = openRulesModal;
 }
 
 function renderJoin(){
@@ -1189,28 +1160,24 @@ function renderJoin(){
     <div class="card">
       <h2>${currentLang === 'ja' ? '部屋に入る' : 'Join Room'}</h2>
       <p>${currentLang === 'ja' ? 'ホストから伝えられた部屋番号を入力してください。' : 'Enter the room code provided by the host.'}</p>
-      <label style="font-size:12px;color:var(--ink-soft);" data-i18n="enterName">${t('enterName')}</label>
+      <label style="font-size:12px;color:var(--ink-soft);">${t('enterName')}</label>
       <input class="form-input" id="nameInput2" placeholder="${currentLang === 'ja' ? '例：探偵2' : 'Ex: Detective2'}" value="${ui.nameInput}">
-      <label style="font-size:12px;color:var(--ink-soft);" data-i18n="roomCode">${t('roomCode')}</label>
+      <label style="font-size:12px;color:var(--ink-soft);">${t('roomCode')}</label>
       <input class="form-input code-input" id="codeInput" maxlength="6" placeholder="${currentLang === 'ja' ? '部屋番号' : 'Room Code'}" value="${ui.codeInput}">
       <div class="center">
-        <button class="btn primary" id="doJoin" data-i18n="join">${t('join')}</button>
+        <button class="btn primary" id="doJoin">${t('join')}</button>
       </div>
       ${ui.joinError?`<div class="err-text center">${ui.joinError}</div>`:''}
-      <div class="center" style="margin-top:14px;"><button class="rules-link" id="joinRulesBtn" data-i18n="howToPlay">${t('howToPlay')}</button> ・ <button class="btn small" id="back2" data-i18n="back">${t('back')}</button></div>
+      <div class="center" style="margin-top:14px;"><button class="rules-link" id="joinRulesBtn">${t('howToPlay')}</button> ・ <button class="btn small" id="back2">${t('back')}</button></div>
     </div>
   `;
   stage.appendChild(wrap);
-  const jrb = document.getElementById('joinRulesBtn');
-  const ni2 = document.getElementById('nameInput2');
-  const ci = document.getElementById('codeInput');
-  const dj = document.getElementById('doJoin');
-  const b2 = document.getElementById('back2');
-  if(jrb) jrb.onclick = openRulesModal;
-  if(ni2) ni2.oninput = e=>{ ui.nameInput=e.target.value; };
-  if(ci) ci.oninput = e=>{ ui.codeInput=e.target.value.toUpperCase(); };
-  if(dj) dj.onclick = joinRoom;
-  if(b2) b2.onclick = ()=>{ ui.screen='title'; render(); };
+  
+  document.getElementById('nameInput2').oninput = e=>{ ui.nameInput=e.target.value; };
+  document.getElementById('codeInput').oninput = e=>{ ui.codeInput=e.target.value.toUpperCase(); };
+  document.getElementById('doJoin').onclick = joinRoom;
+  document.getElementById('back2').onclick = ()=>{ ui.screen='title'; render(); };
+  document.getElementById('joinRulesBtn').onclick = openRulesModal;
 }
 
 function renderLobby(){
@@ -1230,29 +1197,25 @@ function renderLobby(){
           : `<div class="wait-panel"><div>${t('waiting')}<span class="wait-dots"></span></div></div>`}
       </div>
       ${isHost && roomView.players.length<2 ? `<p class="err-text center">${t('minimumPlayers')}</p>`:''}
-      <div class="center" style="margin-top:14px;"><button class="rules-link" id="lobbyRulesBtn" data-i18n="howToPlay">${t('howToPlay')}</button> ・ <button class="btn small" id="leaveBtn" data-i18n="leave">${t('leave')}</button></div>
+      <div class="center" style="margin-top:14px;"><button class="rules-link" id="lobbyRulesBtn">${t('howToPlay')}</button> ・ <button class="btn small" id="leaveBtn">${t('leave')}</button></div>
     </div>
     <div class="conn-note live">${currentLang === 'ja' ? '直接接続中（P2P・リアルタイム反映）' : 'Direct Connection (P2P・Real-time)'}</div>
   `;
   stage.appendChild(wrap);
-  const lrb = document.getElementById('lobbyRulesBtn');
-  const ls = document.getElementById('lobbySeats');
+  
+  document.getElementById('lobbySeats').appendChild(buildLobbySeatTable());
   const pl = document.getElementById('pList');
-  const sb = document.getElementById('startBtn');
-  const lb = document.getElementById('leaveBtn');
-  if(lrb) lrb.onclick = openRulesModal;
-  if(ls) ls.appendChild(buildLobbySeatTable());
-  if(pl){
-    roomView.players.forEach((p,i)=>{
-      const row = document.createElement('div');
-      row.className='player-row';
-      row.style.borderLeftColor = p.color;
-      row.innerHTML = `<span class="dot" style="background:${p.color}"></span><span>${p.name}</span>${isHost&&i===0?'<span class="tag">'+(currentLang === 'ja' ? 'ホスト' : 'Host')+'</span>':''}${i===myPlayerIndex?'<span class="tag">'+(currentLang === 'ja' ? 'あなた' : 'You')+'</span>':''}${p.connected===false?'<span class="tag" style="color:var(--blood);">'+(currentLang === 'ja' ? '切断中' : 'Disconnected')+'</span>':''}`;
-      pl.appendChild(row);
-    });
-  }
-  if(sb) sb.onclick = hostStartGame;
-  if(lb) lb.onclick = leaveRoom;
+  roomView.players.forEach((p,i)=>{
+    const row = document.createElement('div');
+    row.className='player-row';
+    row.style.borderLeftColor = p.color;
+    row.innerHTML = `<span class="dot" style="background:${p.color}"></span><span>${p.name}</span>${isHost&&i===0?'<span class="tag">'+(currentLang === 'ja' ? 'ホスト' : 'Host')+'</span>':''}${i===myPlayerIndex?'<span class="tag">'+(currentLang === 'ja' ? 'あなた' : 'You')+'</span>':''}${p.connected===false?'<span class="tag" style="color:var(--blood);">'+(currentLang === 'ja' ? '切断中' : 'Disconnected')+'</span>':''}`;
+    pl.appendChild(row);
+  });
+  
+  if(isHost) document.getElementById('startBtn').onclick = hostStartGame;
+  document.getElementById('leaveBtn').onclick = leaveRoom;
+  document.getElementById('lobbyRulesBtn').onclick = openRulesModal;
 }
 
 function buildScoreboard(highlightIdx){
@@ -1276,6 +1239,37 @@ function seatPositions(n){
   if(n===5) return [{x:50,y:88},{x:88,y:62},{x:82,y:18},{x:18,y:18},{x:12,y:62}];
   const arr=[]; for(let i=0;i<n;i++){ const a=(Math.PI/2)+(2*Math.PI*i/n); arr.push({x:50+40*Math.cos(a), y:50+40*Math.sin(a)}); }
   return arr;
+}
+
+function buildLobbySeatTable(){
+  const n = 5;
+  const positions = seatPositions(n);
+  const wrap = document.createElement('div');
+  wrap.className='table-wrap';
+  const surface=document.createElement('div');
+  surface.className='table-surface';
+  wrap.appendChild(surface);
+  const ordered = [];
+  if(myPlayerIndex>=0){
+    for(let i=0;i<roomView.players.length;i++) ordered.push(roomView.players[(myPlayerIndex+i)%roomView.players.length]);
+  } else {
+    ordered.push(...roomView.players);
+  }
+  for(let offset=0; offset<n; offset++){
+    const p = ordered[offset];
+    const pos = positions[offset];
+    const seat = document.createElement('div');
+    if(p){
+      seat.className='seat'+(offset===0?' me':'');
+      seat.innerHTML = `<div class="avatar" style="background:${p.color}">${p.name.slice(0,1)}</div><div class="seat-name">${p.name}${offset===0? (currentLang === 'ja' ? '（あなた）' : ' (You)') :''}</div>`;
+    } else {
+      seat.className='seat empty';
+      seat.innerHTML = `<div class="avatar">−</div><div class="seat-name">${currentLang === 'ja' ? '空席' : 'Empty'}</div>`;
+    }
+    seat.style.left=pos.x+'%'; seat.style.top=pos.y+'%';
+    wrap.appendChild(seat);
+  }
+  return wrap;
 }
 
 function buildSeatTable(opts){
@@ -1312,57 +1306,6 @@ function buildSeatTable(opts){
     wrap.appendChild(seat);
   }
   return wrap;
-}
-
-function buildLobbySeatTable(){
-  const n = 5;
-  const positions = seatPositions(n);
-  const wrap = document.createElement('div');
-  wrap.className='table-wrap';
-  const surface=document.createElement('div');
-  surface.className='table-surface';
-  wrap.appendChild(surface);
-  const ordered = [];
-  if(myPlayerIndex>=0){
-    for(let i=0;i<roomView.players.length;i++) ordered.push(roomView.players[(myPlayerIndex+i)%roomView.players.length]);
-  } else {
-    ordered.push(...roomView.players);
-  }
-  for(let offset=0; offset<n; offset++){
-    const p = ordered[offset];
-    const pos = positions[offset];
-    const seat = document.createElement('div');
-    if(p){
-      seat.className='seat'+(offset===0?' me':'');
-      seat.innerHTML = `<div class="avatar" style="background:${p.color}">${p.name.slice(0,1)}</div><div class="seat-name">${p.name}${offset===0? (currentLang === 'ja' ? '（あなた）' : ' (You)') :''}</div>`;
-    } else {
-      seat.className='seat empty';
-      seat.innerHTML = `<div class="avatar">−</div><div class="seat-name">${currentLang === 'ja' ? '空席' : 'Empty'}</div>`;
-    }
-    seat.style.left=pos.x+'%'; seat.style.top=pos.y+'%';
-    wrap.appendChild(seat);
-  }
-  return wrap;
-}
-
-function appendLeaveLink(wrap){
-  const p = document.createElement('p');
-  p.className='center';
-  p.style.cssText='margin-top:18px;';
-  const rulesBtn = document.createElement('button');
-  rulesBtn.className='rules-link';
-  rulesBtn.textContent = t('howToPlay');
-  rulesBtn.onclick = openRulesModal;
-  const sep = document.createTextNode(' ・ ');
-  const leaveBtn = document.createElement('button');
-  leaveBtn.className='btn small';
-  leaveBtn.style.opacity='.6';
-  leaveBtn.textContent = t('leave');
-  leaveBtn.onclick = leaveRoom;
-  p.appendChild(rulesBtn);
-  p.appendChild(sep);
-  p.appendChild(leaveBtn);
-  wrap.appendChild(p);
 }
 
 function buildMyCardsPanel(){
@@ -1479,7 +1422,25 @@ function renderAlibi(){
   }
   wrap.appendChild(actionArea);
   wrap.appendChild(buildScoreboard(-1));
-  appendLeaveLink(wrap);
+  
+  const p = document.createElement('p');
+  p.className='center';
+  p.style.cssText='margin-top:18px;';
+  const rulesBtn = document.createElement('button');
+  rulesBtn.className='rules-link';
+  rulesBtn.textContent = t('howToPlay');
+  rulesBtn.onclick = openRulesModal;
+  const sep = document.createTextNode(' ・ ');
+  const leaveBtn = document.createElement('button');
+  leaveBtn.className='btn small';
+  leaveBtn.style.opacity='.6';
+  leaveBtn.textContent = t('leave');
+  leaveBtn.onclick = leaveRoom;
+  p.appendChild(rulesBtn);
+  p.appendChild(sep);
+  p.appendChild(leaveBtn);
+  wrap.appendChild(p);
+  
   stage.appendChild(wrap);
 
   const va = document.getElementById('viewAlibi');
@@ -1506,12 +1467,14 @@ function ensureTurnLocal(){
 }
 
 function renderTurns(){
+  ensureTurnLocal();
   const curIdx = roomView.turnOrder[roomView.currentPos];
   const isMyTurn = curIdx===myPlayerIndex;
+  const tl = turnLocal;
 
   const wrap = document.createElement('div');
   wrap.className='fade';
-  wrap.innerHTML = `<div class="round-header"><span>${t('round')} ${roomView.round} ${t('turn')}</span><span>${t('turn')} ${roomView.currentPos+1} / ${roomView.players.length}</span></div>`;
+  wrap.innerHTML = `<div class="round-header"><span>${t('round')} ${roomView.round}</span><span>${t('turn')} ${roomView.currentPos+1} / ${roomView.players.length}</span></div>`;
   wrap.appendChild(buildSeatTable({ mini:true, highlightSet:new Set([curIdx]), dim:true }));
   wrap.appendChild(buildScoreboard(curIdx));
   
@@ -1519,14 +1482,27 @@ function renderTurns(){
     wrap.appendChild(buildMyCardsPanel());
   }
   
-  ensureTurnLocal();
-  const tl = turnLocal;
-  
   if(tl.peekedValues && Object.keys(tl.peekedValues).length > 0){
     wrap.appendChild(buildPeekedSuspectsPanel());
   }
   
-  appendLeaveLink(wrap);
+  const p = document.createElement('p');
+  p.className='center';
+  p.style.cssText='margin-top:18px;';
+  const rulesBtn = document.createElement('button');
+  rulesBtn.className='rules-link';
+  rulesBtn.textContent = t('howToPlay');
+  rulesBtn.onclick = openRulesModal;
+  const sep = document.createTextNode(' ・ ');
+  const leaveBtn = document.createElement('button');
+  leaveBtn.className='btn small';
+  leaveBtn.style.opacity='.6';
+  leaveBtn.textContent = t('leave');
+  leaveBtn.onclick = leaveRoom;
+  p.appendChild(rulesBtn);
+  p.appendChild(sep);
+  p.appendChild(leaveBtn);
+  wrap.appendChild(p);
 
   const victimCard = document.createElement('div');
   victimCard.className='victim-card';
@@ -1557,7 +1533,6 @@ function renderTurns(){
     if(isMyTurn && roomView.currentPos===0 && !tl.evidenceSeen && !isPeeked){
       card.classList.add('clickable');
       card.onclick = ()=>{
-        // トグル機能：選択済みなら解除、未選択なら追加（最大2人まで）
         if(tl.chosenTwo.has(i)){
           tl.chosenTwo.delete(i);
         } else if(tl.chosenTwo.size < 2){
@@ -1695,44 +1670,42 @@ function renderTurns(){
 function openRulesModal(){
   const overlay = document.createElement('div');
   overlay.className='modal-overlay';
-  const rules = t('rules');
   overlay.innerHTML = `
     <div class="modal-box rules-box">
-      <h3>${rules.title}</h3>
-
-      <h4>${rules.overview}</h4>
-      <p>${rules.overviewText}</p>
-
-      <h4>${rules.alibiPhase}</h4>
-      <p>${rules.alibiText}</p>
-
-      <h4>${rules.testimonyPhase}</h4>
+      <h3>${currentLang === 'ja' ? '遊び方 — の中' : 'How to Play — In a Grove'}</h3>
+      <h4>${currentLang === 'ja' ? '概要' : 'Overview'}</h4>
+      <p>${currentLang === 'ja' ? '竹林で一体の骸が見つかった。現場には「被害者」1枚と「容疑者」3枚(容疑者A・B・C)の数字タイルが伏せられている。プレイヤーは2〜5人。全員が少しずつ違う手がかりを持ち寄り、証言を重ねながら「本当の犯人」を推理する。' : 'A corpse was found in a bamboo grove. At the scene are 1 "Victim" tile and 3 "Suspect" tiles (Suspects A, B, C) placed face down. 2-5 players work together, each gathering different clues and sharing testimonies to deduce the "true culprit".'}</p>
+      
+      <h4>${currentLang === 'ja' ? '① アリバイ確認フェーズ' : '① Alibi Check Phase'}</h4>
+      <p>${currentLang === 'ja' ? '各ラウンドの最初に、現場の4枚とは別の「事件と無関係な人物」のタイルが、自分と隣の人にそれぞれ配られる。両方を確認すると、「少なくともこの2つの数字は容疑者・被害者には含まれない」という除外情報が手に入る。このカードはターン中ずっと画面に表示され続けるので、忘れません。全員が確認を終えると次のフェーズへ進む。' : 'At the start of each round, tiles of "people unrelated to the case" are dealt to you and your neighbor. By checking both, you gain exclusion information that "at least these 2 numbers are not among the suspects or victim". These cards remain displayed throughout your turn so you won\'t forget. When everyone finishes checking, proceed to the next phase.'}</p>
+      
+      <h4>${currentLang === 'ja' ? '② 証言フェーズ（手番）' : ' Testimony Phase (Turns)'}</h4>
       <ul>
-        <li><b>${rules.firstDetective}</b>：${rules.firstDetectiveText}</li>
-        <li><b>${rules.otherPlayers}</b>：${rules.otherPlayersText}</li>
+        <li><b>${currentLang === 'ja' ? '第一発見者（一番手）' : 'First Detective (1st Player)'}</b>：${currentLang === 'ja' ? '容疑者カードを直接タッチして、好きな2人の数字を覗く。残り1人は「見なかった」として周囲に伝わる（数字自体は非公開）。確認した数字はカード自体に表示され、ターン中ずっと見える。拡張ルール使用時は、被害者と容疑者1人のタイルを入れ替えるかどうかも選べる（数字は公開されない）。最後に、犯人だと思う容疑者1人にチップを置く。' : 'Touch suspect cards directly to peek at 2 people\'s numbers. The remaining 1 is marked as "unseen" to others (number itself hidden). Peeked numbers are displayed on the cards and remain visible throughout the turn. With expansion rule, you can choose whether to swap the victim tile with 1 suspect tile (number not revealed). Finally, place your chip on the suspect you believe is the culprit.'}</li>
+        <li><b>${currentLang === 'ja' ? '2番手以降' : '2nd Player Onwards'}</b>：${currentLang === 'ja' ? '直前の人がチップを置いた容疑者を除く、残り2人の数字を確認できる。同じように、犯人だと思う容疑者にチップを置く。' : 'Excluding the suspect where the previous player placed their chip, check the numbers of the remaining 2. Similarly, place your chip on the suspect you believe is the culprit.'}</li>
       </ul>
-      <p>${rules.highlight}</p>
-
-      <h4>${rules.culpritRule}</h4>
+      <p>${currentLang === 'ja' ? '容疑者を選択すると、カードが光って強調表示されます。全員がチップを置き終えたら、真相解明フェーズに移る。' : 'When you select a suspect, the card glows for emphasis. When everyone places their chips, proceed to the truth revelation phase.'}</p>
+      
+      <h4>${currentLang === 'ja' ? '③ 真犯人の見分け方' : '③ Identifying the True Culprit'}</h4>
       <ul>
-        <li>${rules.hasFive}</li>
-        <li>${rules.noFive}</li>
-        <li>${rules.noCulprit}</li>
+        <li>${currentLang === 'ja' ? '容疑者3人の中に「↓5↑」がいる場合 → 最も小さい数字の容疑者が真犯人。' : 'If "↓5↑" is among the 3 suspects → The suspect with the smallest number is the true culprit.'}</li>
+        <li>${currentLang === 'ja' ? '「↓5↑」がいない場合 → 最も大きい数字の容疑者が真犯人。' : 'If "↓5↑" is not present → The suspect with the largest number is the true culprit.'}</li>
+        <li>${currentLang === 'ja' ? '3人とも白紙の場合 → 犯人なし（ありえない組み合わせ）。' : 'If all 3 are blank → No culprit (impossible combination).'}</li>
       </ul>
-      <div class="rule-note">${rules.flipNote}</div>
-
-      <h4>${rules.chipSettlement}</h4>
+      <div class="rule-note">${currentLang === 'ja' ? '「↓5↑」は特別な数字（flip）です。赤く光って表示され、ゲームの勝敗を大きく左右します。' : '"↓5↑" is a special number (flip). It glows red and greatly affects the game outcome.'}</div>
+      
+      <h4>${currentLang === 'ja' ? '④ チップの精算' : ' Chip Settlement'}</h4>
       <ul>
-        <li>${rules.correctGuess}</li>
-        <li>${rules.wrongGuess}</li>
+        <li>${currentLang === 'ja' ? '真犯人にチップを置いていた人は、チップが無事に戻ってくる。' : 'Players who placed chips on the true culprit get their chips back safely.'}</li>
+        <li>${currentLang === 'ja' ? '外れた容疑者にチップを置いていた人たちは、全員「手持ち」を1枚失う。さらに、その山に最後にチップを置いた人が、山にあったチップ全部を「失敗チップ」としてまとめて引き取る。' : 'Players who placed chips on wrong suspects each lose 1 "hand" chip. Furthermore, the person who placed the last chip on that pile takes all chips from that pile as "failure chips".'}</li>
       </ul>
-
-      <h4>${rules.endGame}</h4>
-      <p>${rules.endGameText}</p>
-
-      <div class="rule-note">${rules.note}</div>
-
-      <div class="center" style="margin-top:20px;"><button class="btn primary small" id="closeRules">${rules.close}</button></div>
+      
+      <h4>${currentLang === 'ja' ? '⑤ 終了と勝敗' : '⑤ End Game & Victory'}</h4>
+      <p>${currentLang === 'ja' ? 'ラウンド終了時に、誰かの「失敗チップ」が8枚以上、または「手持ち」が0枚になっていたら、そこで捜査終了。「失敗チップ」が最も少ない人が勝者。そうでなければ、次のラウンドへ進む（第一発見者は一人ずつ交代する）。' : 'At round end, if anyone has 8 or more "failure chips" or 0 "hand" chips, the investigation ends. The player with the fewest "failure chips" wins. Otherwise, proceed to the next round (first detective rotates).'}</p>
+      
+      <div class="rule-note">${currentLang === 'ja' ? 'ホストの端末がゲーム全体の進行を管理し、他の人には見せてよい情報だけを送るので、隠すべき数字は自分の画面にしか表示されません。' : 'The host\'s device manages the entire game progression and only sends information that should be shown to others, so hidden numbers only appear on your own screen.'}</div>
+      
+      <div class="center" style="margin-top:20px;"><button class="btn primary small" id="closeRules">${currentLang === 'ja' ? '閉じる' : 'Close'}</button></div>
     </div>`;
   document.body.appendChild(overlay);
   const cr = document.getElementById('closeRules');
@@ -1808,7 +1781,24 @@ function renderReveal(){
   });
   wrap.appendChild(resList);
   wrap.appendChild(buildScoreboard(-1));
-  appendLeaveLink(wrap);
+  
+  const p = document.createElement('p');
+  p.className='center';
+  p.style.cssText='margin-top:18px;';
+  const rulesBtn = document.createElement('button');
+  rulesBtn.className='rules-link';
+  rulesBtn.textContent = t('howToPlay');
+  rulesBtn.onclick = openRulesModal;
+  const sep = document.createTextNode(' ・ ');
+  const leaveBtn = document.createElement('button');
+  leaveBtn.className='btn small';
+  leaveBtn.style.opacity='.6';
+  leaveBtn.textContent = t('leave');
+  leaveBtn.onclick = leaveRoom;
+  p.appendChild(rulesBtn);
+  p.appendChild(sep);
+  p.appendChild(leaveBtn);
+  wrap.appendChild(p);
 
   const btnArea = document.createElement('div');
   btnArea.className='center';
@@ -1863,8 +1853,12 @@ function renderFinal(){
 }
 
 function render(){ 
-  renderApp(); 
-  renderChat(); 
+  try {
+    renderApp(); 
+    renderChat();
+  } catch(e) {
+    console.error('Render error:', e);
+  }
 }
 
 // チャット機能の初期化
@@ -1887,10 +1881,23 @@ function initChat(){
   });
 }
 
-// 初期表示
-updateTexts();
-render();
+// 言語切り替え
+function toggleLanguage() {
+  try {
+    currentLang = currentLang === 'ja' ? 'en' : 'ja';
+    document.getElementById('langBtn').textContent = currentLang === 'ja' ? 'English' : '日本語';
+    labels = currentLang === 'ja' ? ['容疑者 A','容疑者 B','容疑者 C'] : ['Suspect A','Suspect B','Suspect C'];
+    render();
+  } catch(e) {
+    console.error('Language toggle error:', e);
+  }
+}
+
+// 初期化
+document.getElementById('langBtn').onclick = toggleLanguage;
 initChat();
+render();
+
 })();
 </script>
 </body>

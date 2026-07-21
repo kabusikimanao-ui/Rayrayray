@@ -115,7 +115,21 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
   margin-bottom:8px;
   border:2px solid var(--ink-soft);
   display:flex; align-items:center; justify-content:center;
-  font-size:24px; font-weight:700; color:var(--ink);
+  font-size:20px; font-weight:700; color:var(--ink);
+  line-height:1.2;
+}
+/* 5の特別表示 - 赤く目立つ */
+.suspect-card .head.is-flip{
+  background:var(--blood);
+  color:#fff;
+  border-color:var(--blood-soft);
+  font-size:16px;
+  box-shadow:0 0 12px rgba(140,47,38,.6);
+  animation:flipGlow 2s ease-in-out infinite;
+}
+@keyframes flipGlow{
+  0%,100%{ box-shadow:0 0 12px rgba(140,47,38,.6); }
+  50%{ box-shadow:0 0 20px rgba(140,47,38,.9); }
 }
 .suspect-card .body{ 
   width:65px; height:60px; 
@@ -177,7 +191,23 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
 .modal-box{ background:var(--paper); border:1px solid var(--paper-deep); padding:32px 28px; max-width:380px; width:100%; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,.4); }
 .modal-box h3{ font-size:16px; margin-bottom:18px; letter-spacing:.1em; }
 .peek-values{ display:flex; gap:16px; justify-content:center; margin:20px 0; flex-wrap:wrap;}
-.peek-value{ width:76px; height:96px; border:2px solid var(--blood); display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:700; color:var(--blood); background:#f7f0dc; border-radius:8px; }
+.peek-value{ 
+  width:76px; height:96px; 
+  border:2px solid var(--blood); 
+  display:flex; align-items:center; justify-content:center; 
+  font-size:28px; font-weight:700; color:var(--blood); 
+  background:#f7f0dc; border-radius:8px;
+  line-height:1.2;
+}
+/* 5の特別表示 */
+.peek-value.is-flip{
+  background:var(--blood);
+  color:#fff;
+  border-color:var(--blood-soft);
+  box-shadow:0 0 16px rgba(140,47,38,.6);
+  font-size:22px;
+  animation:flipGlow 2s ease-in-out infinite;
+}
 .peek-col{ display:flex; flex-direction:column; align-items:center; gap:8px; }
 .peek-col .cap{ font-size:11px; color:var(--ink-soft); letter-spacing:.1em; }
 
@@ -229,8 +259,9 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   padding:8px;
 }
-.mini-card .mini-head{ width:30px; height:30px; border-radius:50%; background:var(--paper-deep); border:1.5px solid var(--ink-soft); margin-bottom:4px; }
-.mini-card .mini-body{ width:36px; height:32px; background:var(--paper-dark); border-radius:12px 12px 8px 8px; border:1.5px solid var(--ink-soft); display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; }
+.mini-card .mini-head{ width:30px; height:30px; border-radius:50%; background:var(--paper-deep); border:1.5px solid var(--ink-soft); margin-bottom:4px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; }
+.mini-card .mini-head.is-flip{ background:var(--blood); color:#fff; border-color:var(--blood-soft); font-size:10px; }
+.mini-card .mini-body{ width:36px; height:32px; background:var(--paper-dark); border-radius:12px 12px 8px 8px; border:1.5px solid var(--ink-soft); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; }
 .mini-card .mini-label{ font-size:9px; color:var(--ink-soft); margin-top:4px; }
 
 .peeked-suspects-panel{
@@ -254,9 +285,18 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
   width:42px; height:42px; border-radius:50%;
   background:var(--bamboo);
   display:flex; align-items:center; justify-content:center;
-  font-size:20px; font-weight:700; color:#fff;
+  font-size:14px; font-weight:700; color:#fff;
   margin-bottom:6px;
   border:2px solid var(--bamboo-dark);
+  line-height:1.1;
+}
+/* 5の特別表示 */
+.peeked-card .p-head.is-flip{
+  background:var(--blood);
+  border-color:var(--blood-soft);
+  font-size:12px;
+  box-shadow:0 0 10px rgba(140,47,38,.5);
+  animation:flipGlow 2s ease-in-out infinite;
 }
 .peeked-card .p-body{
   width:50px; height:45px;
@@ -271,6 +311,19 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
 .hidden{ display:none !important; }
 .fade{ animation:f .4s ease both; }
 @keyframes f{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+/* 5の説明バッジ */
+.flip-badge{
+  display:inline-block;
+  background:var(--blood);
+  color:#fff;
+  font-size:10px;
+  padding:2px 6px;
+  border-radius:8px;
+  margin-left:4px;
+  vertical-align:middle;
+  letter-spacing:.05em;
+}
 </style>
 </head>
 <body>
@@ -295,6 +348,18 @@ let pending = new Map();
 let ui = { screen:'title', nameInput:'', codeInput:'', customCode:'', useCustomCode:false, expansionChoice:false, joinError:null, createError:null, disconnected:false };
 let turnLocal = null;
 let alibiLocal = { round:null, shown:false, values:null };
+
+// 値を「↓5↑」形式で表示するヘルパー関数
+function formatFlipValue(val){
+  if(val === 5) return '↓5↑';
+  if(val === 'blank') return '白';
+  return String(val);
+}
+
+// 値が5かどうか
+function isFlipValue(val){
+  return val === 5;
+}
 
 function genCode(){
   const chars='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -699,13 +764,16 @@ function renderDisconnected(){
     <button class="btn primary" id="backAfterDisconnect">部屋番号を入力し直す</button>
   `;
   stage.appendChild(wrap);
-  document.getElementById('backAfterDisconnect').onclick = ()=>{
-    const savedCode = roomView ? roomView.code : '';
-    try{ if(peer) peer.destroy(); }catch(e){}
-    peer=null; hostConn=null; roomView=null; myPlayerIndex=-1; reqCounter=0; pending=new Map();
-    ui = { screen:'join', nameInput:ui.nameInput, codeInput:savedCode, customCode:'', useCustomCode:false, expansionChoice:false, joinError:null, createError:null, disconnected:false };
-    render();
-  };
+  const btn = document.getElementById('backAfterDisconnect');
+  if(btn){
+    btn.onclick = ()=>{
+      const savedCode = roomView ? roomView.code : '';
+      try{ if(peer) peer.destroy(); }catch(e){}
+      peer=null; hostConn=null; roomView=null; myPlayerIndex=-1; reqCounter=0; pending=new Map();
+      ui = { screen:'join', nameInput:ui.nameInput, codeInput:savedCode, customCode:'', useCustomCode:false, expansionChoice:false, joinError:null, createError:null, disconnected:false };
+      render();
+    };
+  }
 }
 
 function renderTitle(){
@@ -719,7 +787,8 @@ function renderTitle(){
     <div class="notice-box">
       このバージョンは<b>2〜5人</b>対応。ブラウザ同士が<b>WebRTCで直接通信</b>します。<b>部屋を作った人の端末がゲームの進行を管理</b>します。<br><br>
       <b>部屋番号は自分で決められます</b>（3〜6文字）。<br>
-      <b>容疑者カードをタッチして</b>数字を確認します。
+      <b>容疑者カードをタッチして</b>数字を確認します。<br>
+      <b style="color:var(--blood);">「↓5↑」は特別な数字</b>（flip）です。
     </div>
     <div class="row" style="justify-content:center;">
       <button class="btn primary" id="toCreate">部屋を作る（ホスト）</button>
@@ -728,9 +797,12 @@ function renderTitle(){
     <div class="center" style="margin-top:16px;"><button class="rules-link" id="titleRulesBtn">遊び方・ルールを見る</button></div>
   `;
   stage.appendChild(wrap);
-  document.getElementById('toCreate').onclick = ()=>{ ui.screen='create'; render(); };
-  document.getElementById('toJoin').onclick = ()=>{ ui.screen='join'; render(); };
-  document.getElementById('titleRulesBtn').onclick = openRulesModal;
+  const c1 = document.getElementById('toCreate');
+  const c2 = document.getElementById('toJoin');
+  const c3 = document.getElementById('titleRulesBtn');
+  if(c1) c1.onclick = ()=>{ ui.screen='create'; render(); };
+  if(c2) c2.onclick = ()=>{ ui.screen='join'; render(); };
+  if(c3) c3.onclick = openRulesModal;
 }
 
 function renderConnecting(){
@@ -769,32 +841,28 @@ function renderCreate(){
     </div>
   `;
   stage.appendChild(wrap);
-  document.getElementById('createRulesBtn').onclick = openRulesModal;
-  document.getElementById('nameInput').oninput = e=>{ ui.nameInput=e.target.value; };
-  
-  const useCustomCheckbox = document.getElementById('useCustomCode');
-  if(useCustomCheckbox){
-    useCustomCheckbox.onchange = e=>{ 
-      ui.useCustomCode = e.target.checked; 
-      render(); 
-    };
-  }
-  
-  const customCodeInput = document.getElementById('customCodeInput');
-  if(customCodeInput){
-    customCodeInput.oninput = e=>{ ui.customCode=e.target.value.toUpperCase(); };
-  }
-  
+  const crb = document.getElementById('createRulesBtn');
+  const ni = document.getElementById('nameInput');
+  const ucc = document.getElementById('useCustomCode');
+  const cci = document.getElementById('customCodeInput');
+  const dc = document.getElementById('doCreate');
+  const b1 = document.getElementById('back1');
+  if(crb) crb.onclick = openRulesModal;
+  if(ni) ni.oninput = e=>{ ui.nameInput=e.target.value; };
+  if(ucc) ucc.onchange = e=>{ ui.useCustomCode = e.target.checked; render(); };
+  if(cci) cci.oninput = e=>{ ui.customCode=e.target.value.toUpperCase(); };
   const expRow = document.getElementById('expRow');
-  [{v:false,label:'使わない'},{v:true,label:'使う'}].forEach(opt=>{
-    const b=document.createElement('button');
-    b.className='count-btn'+(ui.expansionChoice===opt.v?' active':'');
-    b.textContent=opt.label;
-    b.onclick=()=>{ ui.expansionChoice=opt.v; render(); };
-    expRow.appendChild(b);
-  });
-  document.getElementById('doCreate').onclick = createRoom;
-  document.getElementById('back1').onclick = ()=>{ ui.screen='title'; render(); };
+  if(expRow){
+    [{v:false,label:'使わない'},{v:true,label:'使う'}].forEach(opt=>{
+      const b=document.createElement('button');
+      b.className='count-btn'+(ui.expansionChoice===opt.v?' active':'');
+      b.textContent=opt.label;
+      b.onclick=()=>{ ui.expansionChoice=opt.v; render(); };
+      expRow.appendChild(b);
+    });
+  }
+  if(dc) dc.onclick = createRoom;
+  if(b1) b1.onclick = ()=>{ ui.screen='title'; render(); };
 }
 
 function renderJoin(){
@@ -816,11 +884,16 @@ function renderJoin(){
     </div>
   `;
   stage.appendChild(wrap);
-  document.getElementById('joinRulesBtn').onclick = openRulesModal;
-  document.getElementById('nameInput2').oninput = e=>{ ui.nameInput=e.target.value; };
-  document.getElementById('codeInput').oninput = e=>{ ui.codeInput=e.target.value.toUpperCase(); };
-  document.getElementById('doJoin').onclick = joinRoom;
-  document.getElementById('back2').onclick = ()=>{ ui.screen='title'; render(); };
+  const jrb = document.getElementById('joinRulesBtn');
+  const ni2 = document.getElementById('nameInput2');
+  const ci = document.getElementById('codeInput');
+  const dj = document.getElementById('doJoin');
+  const b2 = document.getElementById('back2');
+  if(jrb) jrb.onclick = openRulesModal;
+  if(ni2) ni2.oninput = e=>{ ui.nameInput=e.target.value; };
+  if(ci) ci.oninput = e=>{ ui.codeInput=e.target.value.toUpperCase(); };
+  if(dj) dj.onclick = joinRoom;
+  if(b2) b2.onclick = ()=>{ ui.screen='title'; render(); };
 }
 
 function renderLobby(){
@@ -845,18 +918,24 @@ function renderLobby(){
     <div class="conn-note live">直接接続中（P2P・リアルタイム反映）</div>
   `;
   stage.appendChild(wrap);
-  document.getElementById('lobbyRulesBtn').onclick = openRulesModal;
-  document.getElementById('lobbySeats').appendChild(buildLobbySeatTable());
-  const pList = document.getElementById('pList');
-  roomView.players.forEach((p,i)=>{
-    const row = document.createElement('div');
-    row.className='player-row';
-    row.style.borderLeftColor = p.color;
-    row.innerHTML = `<span class="dot" style="background:${p.color}"></span><span>${p.name}</span>${isHost&&i===0?'<span class="tag">ホスト</span>':''}${i===myPlayerIndex?'<span class="tag">あなた</span>':''}${p.connected===false?'<span class="tag" style="color:var(--blood);">切断中</span>':''}`;
-    pList.appendChild(row);
-  });
-  if(isHost){ document.getElementById('startBtn').onclick = hostStartGame; }
-  document.getElementById('leaveBtn').onclick = leaveRoom;
+  const lrb = document.getElementById('lobbyRulesBtn');
+  const ls = document.getElementById('lobbySeats');
+  const pl = document.getElementById('pList');
+  const sb = document.getElementById('startBtn');
+  const lb = document.getElementById('leaveBtn');
+  if(lrb) lrb.onclick = openRulesModal;
+  if(ls) ls.appendChild(buildLobbySeatTable());
+  if(pl){
+    roomView.players.forEach((p,i)=>{
+      const row = document.createElement('div');
+      row.className='player-row';
+      row.style.borderLeftColor = p.color;
+      row.innerHTML = `<span class="dot" style="background:${p.color}"></span><span>${p.name}</span>${isHost&&i===0?'<span class="tag">ホスト</span>':''}${i===myPlayerIndex?'<span class="tag">あなた</span>':''}${p.connected===false?'<span class="tag" style="color:var(--blood);">切断中</span>':''}`;
+      pl.appendChild(row);
+    });
+  }
+  if(sb) sb.onclick = hostStartGame;
+  if(lb) lb.onclick = leaveRoom;
 }
 
 function buildScoreboard(highlightIdx){
@@ -910,7 +989,7 @@ function buildSeatTable(opts){
     if(opts.cardFor && Object.prototype.hasOwnProperty.call(opts.cardFor, idx)){
       const val = opts.cardFor[idx];
       const flipped = val!==null && val!==undefined;
-      cardHtml = `<div class="seat-card${flipped?' flipped':''}">${flipped ? (val==='blank'?'白':val) : '？'}</div>`;
+      cardHtml = `<div class="seat-card${flipped?' flipped':''}">${flipped ? formatFlipValue(val) : '？'}</div>`;
     }
     seat.innerHTML = `<div class="avatar" style="background:${p.color}">${p.name.slice(0,1)}</div><div class="seat-name">${p.name}${offset===0&&myPlayerIndex>=0?'（あなた）':''}</div>${cardHtml}`;
     wrap.appendChild(seat);
@@ -983,19 +1062,21 @@ function buildMyCardsPanel(){
   display.className='cards-display';
   
   if(myCard !== null){
+    const flipClass = isFlipValue(myCard) ? ' is-flip' : '';
     display.innerHTML += `
       <div class="mini-card">
-        <div class="mini-head"></div>
-        <div class="mini-body">${myCard==='blank'?'白':myCard}</div>
+        <div class="mini-head${flipClass}">${formatFlipValue(myCard)}</div>
+        <div class="mini-body">人</div>
         <div class="mini-label">あなた</div>
       </div>
     `;
   }
   if(neighborCard !== null){
+    const flipClass = isFlipValue(neighborCard) ? ' is-flip' : '';
     display.innerHTML += `
       <div class="mini-card">
-        <div class="mini-head"></div>
-        <div class="mini-body">${neighborCard==='blank'?'白':neighborCard}</div>
+        <div class="mini-head${flipClass}">${formatFlipValue(neighborCard)}</div>
+        <div class="mini-body">人</div>
         <div class="mini-label">${roomView.players[neighbor].name}</div>
       </div>
     `;
@@ -1019,10 +1100,11 @@ function buildPeekedSuspectsPanel(){
   if(turnLocal && turnLocal.peekedValues){
     Object.entries(turnLocal.peekedValues).forEach(([idx, val])=>{
       const label = labels[parseInt(idx)];
-      const valueText = val==='blank' ? '白' : val;
+      const valueText = formatFlipValue(val);
+      const flipClass = isFlipValue(val) ? ' is-flip' : '';
       display.innerHTML += `
         <div class="peeked-card">
-          <div class="p-head">${valueText}</div>
+          <div class="p-head${flipClass}">${valueText}</div>
           <div class="p-body">人</div>
           <div class="p-label">${label}</div>
         </div>
@@ -1083,16 +1165,18 @@ function renderAlibi(){
   appendLeaveLink(wrap);
   stage.appendChild(wrap);
 
-  if(!acked && !alibiLocal.shown){
-    document.getElementById('viewAlibi').onclick = async ()=>{
+  const va = document.getElementById('viewAlibi');
+  const ca = document.getElementById('closeAlibi');
+  if(!acked && !alibiLocal.shown && va){
+    va.onclick = async ()=>{
       const { result, error } = await Net.alibi();
       if(error) return;
       alibiLocal.values = result;
       alibiLocal.shown = true;
       render();
     };
-  } else if(!acked && alibiLocal.shown){
-    document.getElementById('closeAlibi').onclick = async ()=>{ await Net.ackAlibi(); };
+  } else if(!acked && alibiLocal.shown && ca){
+    ca.onclick = async ()=>{ await Net.ackAlibi(); };
   }
 }
 
@@ -1118,7 +1202,10 @@ function renderTurns(){
     wrap.appendChild(buildMyCardsPanel());
   }
   
-  if(turnLocal && turnLocal.peekedValues && Object.keys(turnLocal.peekedValues).length > 0){
+  ensureTurnLocal();
+  const tl = turnLocal;
+  
+  if(tl.peekedValues && Object.keys(tl.peekedValues).length > 0){
     wrap.appendChild(buildPeekedSuspectsPanel());
   }
   
@@ -1132,9 +1219,6 @@ function renderTurns(){
   const suspectsRow = document.createElement('div');
   suspectsRow.className='suspects-row';
   
-  ensureTurnLocal();
-  const tl = turnLocal;
-  
   for(let i=0;i<3;i++){
     const card = document.createElement('div');
     
@@ -1142,11 +1226,12 @@ function renderTurns(){
     const isPeeked = peekedValue !== null;
     const isChosen = tl.guessChoice===i;
     const isSelectedForPeek = tl.chosenTwo.has(i);
+    const flipClass = isPeeked && isFlipValue(peekedValue) ? ' is-flip' : '';
     
     card.className='suspect-card' + (isPeeked ? ' peeked' : '') + (isChosen ? ' chosen' : '') + (isSelectedForPeek ? ' selected-for-peek' : '');
     card.innerHTML = `
       <div class="s-label">${labels[i]}</div>
-      <div class="head">${isPeeked ? (peekedValue==='blank'?'白':peekedValue) : ''}</div>
+      <div class="head${flipClass}">${isPeeked ? formatFlipValue(peekedValue) : ''}</div>
       <div class="body">${isPeeked ? '確認済' : '？'}</div>
       ${roomView.unseenIdx===i?'<div class="unseen-badge">見なかった</div>':''}
       <div class="chip-stack">${roomView.chipsAt[i].map(pi=>`<span class="chip-dot" style="background:${roomView.players[pi].color}">${roomView.players[pi].name.slice(0,1)}</span>`).join('')}</div>
@@ -1193,17 +1278,15 @@ function renderTurns(){
       wrap.appendChild(actionArea);
       stage.appendChild(wrap);
       
-      if(tl.chosenTwo.size===2){
-        const confirmBtn = document.getElementById('confirmPeek');
-        if(confirmBtn){
-          confirmBtn.onclick = async ()=>{
-            const { result, error } = await Net.peek([...tl.chosenTwo]);
-            if(error) return;
-            tl.peekedValues = result.values;
-            tl.evidenceSeen = true;
-            render();
-          };
-        }
+      const cp = document.getElementById('confirmPeek');
+      if(cp && tl.chosenTwo.size===2){
+        cp.onclick = async ()=>{
+          const { result, error } = await Net.peek([...tl.chosenTwo]);
+          if(error) return;
+          tl.peekedValues = result.values;
+          tl.evidenceSeen = true;
+          render();
+        };
       }
       return;
     } else {
@@ -1215,9 +1298,9 @@ function renderTurns(){
       `;
       wrap.appendChild(actionArea);
       stage.appendChild(wrap);
-      const viewBtn = document.getElementById('viewEvidence');
-      if(viewBtn){
-        viewBtn.onclick = async ()=>{
+      const ve = document.getElementById('viewEvidence');
+      if(ve){
+        ve.onclick = async ()=>{
           const { result, error } = await Net.peek([]);
           if(error) return;
           tl.peekedValues = result.values;
@@ -1304,10 +1387,11 @@ function openRulesModal(){
 
       <h4>③ 真犯人の見分け方</h4>
       <ul>
-        <li>容疑者3人の中に「5」がいる場合 → 最も<b>小さい</b>数字の容疑者が真犯人。</li>
-        <li>「5」がいない場合 → 最も<b>大きい</b>数字の容疑者が真犯人。</li>
+        <li>容疑者3人の中に「<b style="color:var(--blood);">↓5↑</b>」がいる場合 → 最も<b>小さい</b>数字の容疑者が真犯人。</li>
+        <li>「<b style="color:var(--blood);">↓5↑</b>」がいない場合 → 最も<b>大きい</b>数字の容疑者が真犯人。</li>
         <li>3人とも白紙の場合 → 犯人なし（ありえない組み合わせ）。</li>
       </ul>
+      <div class="rule-note"><b style="color:var(--blood);">「↓5↑」</b>は特別な数字（flip）です。赤く光って表示され、ゲームの勝敗を大きく左右します。</div>
 
       <h4>④ チップの精算</h4>
       <ul>
@@ -1323,7 +1407,8 @@ function openRulesModal(){
       <div class="center" style="margin-top:20px;"><button class="btn primary small" id="closeRules">閉じる</button></div>
     </div>`;
   document.body.appendChild(overlay);
-  document.getElementById('closeRules').onclick = ()=>{ document.body.removeChild(overlay); };
+  const cr = document.getElementById('closeRules');
+  if(cr) cr.onclick = ()=>{ document.body.removeChild(overlay); };
 }
 
 function openPeekModal(valuesMap, onClose){
@@ -1334,13 +1419,18 @@ function openPeekModal(valuesMap, onClose){
     <div class="modal-box">
       <h3>確認した証拠</h3>
       <div class="peek-values">
-        ${indices.map(i=>`<div class="peek-col"><div class="cap">${labels[i]}</div><div class="peek-value">${valuesMap[i]==='blank'?'白':valuesMap[i]}</div></div>`).join('')}
+        ${indices.map(i=>{
+          const val = valuesMap[i];
+          const flipClass = isFlipValue(val) ? ' is-flip' : '';
+          return `<div class="peek-col"><div class="cap">${labels[i]}</div><div class="peek-value${flipClass}">${formatFlipValue(val)}</div></div>`;
+        }).join('')}
       </div>
       <p style="font-size:12px;color:var(--ink-soft);margin-bottom:18px;">画面を他の人に見られないよう気をつけて。</p>
       <button class="btn primary small" id="closePeek">伏せて次へ</button>
     </div>`;
   document.body.appendChild(overlay);
-  document.getElementById('closePeek').onclick = ()=>{
+  const cp = document.getElementById('closePeek');
+  if(cp) cp.onclick = ()=>{
     document.body.removeChild(overlay);
     onClose();
   };
@@ -1352,22 +1442,23 @@ function renderReveal(){
   const hasFive = s.includes(5);
   let explain;
   if(culprit===null||culprit===undefined){ explain='ありえない組み合わせだった。'; }
-  else if(hasFive){ explain = `容疑者の中に「5」が含まれているため、最も小さい数字を持つ ${labels[culprit]} が真犯人だった。`; }
+  else if(hasFive){ explain = `容疑者の中に「↓5↑」が含まれているため、最も小さい数字を持つ ${labels[culprit]} が真犯人だった。`; }
   else { explain = `最も大きい数字を持つ ${labels[culprit]} が真犯人だった。`; }
 
   const wrap = document.createElement('div');
   wrap.className='fade';
-  wrap.innerHTML = `<div class="round-header"><span>第 ${roomView.round} ラウンド — 真相解明</span><span>被害者：${roomView.center.victim==='blank'?'白紙':roomView.center.victim}</span></div>`;
+  wrap.innerHTML = `<div class="round-header"><span>第 ${roomView.round} ラウンド — 真相解明</span><span>被害者：${roomView.center.victim==='blank'?'白紙':formatFlipValue(roomView.center.victim)}</span></div>`;
 
   const suspectsRow = document.createElement('div');
   suspectsRow.className='suspects-row';
   for(let i=0;i<3;i++){
     const card = document.createElement('div');
+    const flipClass = isFlipValue(s[i]) ? ' is-flip' : '';
     card.className='suspect-card'+(i===culprit?' culprit':'');
     card.innerHTML = `
       <div class="s-label">${labels[i]}</div>
-      <div class="head"></div>
-      <div class="body">${s[i]==='blank'?'白':s[i]}</div>
+      <div class="head${flipClass}">${formatFlipValue(s[i])}</div>
+      <div class="body">人</div>
       <div class="chip-stack">${roomView.chipsAt[i].map(pi=>`<span class="chip-dot" style="background:${roomView.players[pi].color}">${roomView.players[pi].name.slice(0,1)}</span>`).join('')}</div>
     `;
     suspectsRow.appendChild(card);
@@ -1435,9 +1526,12 @@ function renderFinal(){
     </div>
   `;
   stage.appendChild(wrap);
-  if(isHost){ document.getElementById('playAgain').onclick = hostPlayAgain; }
-  document.getElementById('leaveFinal').onclick = leaveRoom;
-  document.getElementById('finalRulesBtn').onclick = openRulesModal;
+  const pa = document.getElementById('playAgain');
+  const lf = document.getElementById('leaveFinal');
+  const frb = document.getElementById('finalRulesBtn');
+  if(isHost && pa) pa.onclick = hostPlayAgain;
+  if(lf) lf.onclick = leaveRoom;
+  if(frb) frb.onclick = openRulesModal;
 }
 
 function render(){ renderApp(); }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>の中 新版 — P2Pオンライン推理ゲーム</title>
+<title>藪の中 新版 — P2Pオンライン推理ゲーム</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.5/peerjs.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700;800&family=Zen+Old+Mincho:wght@400;600&display=swap');
@@ -134,11 +134,6 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
   border:1px solid var(--paper-deep);
   border-radius:10px;
 }
-.suspect-card .s-value{ 
-  position:absolute; bottom:10px; 
-  font-size:28px; font-weight:700; color:var(--blood);
-  text-shadow:0 2px 4px rgba(0,0,0,.2);
-}
 .suspect-card .unseen-badge{ 
   position:absolute; top:-8px; right:-8px; 
   font-size:10px; background:var(--blood); color:var(--paper); 
@@ -203,9 +198,7 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
 
 .conn-note{ font-size:11px; color:var(--ink-soft); text-align:center; margin-top:20px; letter-spacing:.05em;}
 .conn-note.live::before{ content:'● '; color:var(--bamboo); }
-.disconnect-banner{ background:var(--blood); color:var(--paper); text-align:center; padding:12px; font-size:13px; letter-spacing:.05em; margin-bottom:16px; }
 
-/* テーブル配置 */
 .table-wrap{ position:relative; width:100%; max-width:340px; aspect-ratio:1/1; margin:18px auto 26px; }
 .table-wrap.mini{ max-width:240px; aspect-ratio:16/10; margin:14px auto 18px; }
 .table-surface{ position:absolute; inset:15%; border-radius:50%; background:radial-gradient(circle at 50% 38%, #5c7a4a, #33452a); border:3px solid #2c3d22; box-shadow:inset 0 0 26px rgba(0,0,0,.4); }
@@ -223,7 +216,6 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
 .seat-card.flipped{ background:#f7f0dc; color:var(--blood); border-color:var(--blood); }
 .link-badge{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); font-size:10px; color:var(--gold); letter-spacing:.1em; background:rgba(30,20,10,.55); padding:3px 8px; border-radius:10px; white-space:nowrap; }
 
-/* カード表示エリア（ターン中ずっと表示）*/
 .my-cards-panel{
   background:#f4ecd6; border:2px solid var(--paper-deep);
   padding:16px; margin:16px 0; border-radius:8px;
@@ -241,7 +233,6 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
 .mini-card .mini-body{ width:36px; height:32px; background:var(--paper-dark); border-radius:12px 12px 8px 8px; border:1.5px solid var(--ink-soft); display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; }
 .mini-card .mini-label{ font-size:9px; color:var(--ink-soft); margin-top:4px; }
 
-/* 覗いた容疑者の値を表示（ターン中ずっと）*/
 .peeked-suspects-panel{
   background:#f0f5e8; border:2px solid var(--bamboo);
   padding:16px; margin:16px 0; border-radius:8px;
@@ -292,7 +283,6 @@ const stage = document.getElementById('stage');
 const labels = ['容疑者 A','容疑者 B','容疑者 C'];
 const PeerCtor = (typeof window!=='undefined' && window.Peer) ? window.Peer : (typeof Peer!=='undefined'? Peer : null);
 
-/* ================= LOCAL STATE ================= */
 let isHost = false;
 let peer = null;
 let hostConn = null;
@@ -302,11 +292,10 @@ let roomView = null;
 let myPlayerIndex = -1;
 let reqCounter = 0;
 let pending = new Map();
-let ui = { screen:'title', nameInput:'', codeInput:'', expansionChoice:false, joinError:null, createError:null, disconnected:false };
+let ui = { screen:'title', nameInput:'', codeInput:'', customCode:'', useCustomCode:false, expansionChoice:false, joinError:null, createError:null, disconnected:false };
 let turnLocal = null;
 let alibiLocal = { round:null, shown:false, values:null };
 
-/* ================= UTIL ================= */
 function genCode(){
   const chars='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
   let s=''; for(let i=0;i<4;i++) s+=chars[Math.floor(Math.random()*chars.length)];
@@ -327,7 +316,6 @@ function computeCulprit(suspects){
   return pick.i;
 }
 
-/* ================= ROUND SETUP ================= */
 function buildRoundState(doc){
   const n = doc.players.length;
   const deck = shuffle(freshDeckValues(n));
@@ -371,7 +359,6 @@ function resolveChipsInto(doc){
   doc.resolutionLog = log;
 }
 
-/* ================= HOST FUNCTIONS ================= */
 function computeConnectedFlags(){
   const flags = room.players.map((_,i)=> i===0);
   connections.forEach(({conn, playerIndex})=>{ if(conn.open) flags[playerIndex]=true; });
@@ -537,7 +524,6 @@ function hostSelfAction(type, payload){
   return Promise.resolve({ result: out.result||null, error: out.error||null });
 }
 
-/* ================= NETWORKING ================= */
 function sendToHost(type, payload){
   return new Promise((resolve)=>{
     const id = ++reqCounter;
@@ -568,7 +554,6 @@ document.addEventListener('visibilitychange', ()=>{
   }
 });
 
-/* ================= ROOM LIFECYCLE ================= */
 function tryClaimPeerId(id){
   return new Promise(resolve=>{
     let settled=false;
@@ -581,9 +566,28 @@ function tryClaimPeerId(id){
 async function createRoom(){
   const name = (ui.nameInput||'').trim() || '探偵1';
   ui.screen='connecting'; ui.createError=null; render();
-  let p=null, code=null;
-  for(let i=0;i<6 && !p;i++){ code = genCode(); p = await tryClaimPeerId('yabu-'+code); }
-  if(!p){ ui.screen='create'; ui.createError='部屋の作成に失敗しました。通信環境を確認してもう一度お試しください。'; render(); return; }
+  
+  let code;
+  if(ui.useCustomCode && ui.customCode){
+    code = ui.customCode.toUpperCase().trim();
+    if(code.length < 3 || code.length > 6){
+      ui.screen='create'; 
+      ui.createError='部屋番号は3〜6文字で入力してください。'; 
+      render(); 
+      return;
+    }
+  } else {
+    code = genCode();
+  }
+  
+  let p = await tryClaimPeerId('yabu-'+code);
+  if(!p){ 
+    ui.screen='create'; 
+    ui.createError='この部屋番号はすでに使用されています。別の番号を入力してください。'; 
+    render(); 
+    return; 
+  }
+  
   isHost = true; peer = p;
   room = { code, phase:'lobby', expansionEnabled: !!ui.expansionChoice, players:[], round:1, startIdx:0 };
   const out = actJoin(room, name, 'HOST');
@@ -644,7 +648,7 @@ function leaveRoom(){
   try{ if(peer) peer.destroy(); }catch(e){}
   isHost=false; peer=null; hostConn=null; connections=new Map(); room=null; roomView=null; myPlayerIndex=-1;
   reqCounter=0; pending=new Map(); turnLocal=null; alibiLocal={round:null,shown:false,values:null};
-  ui = { screen:'title', nameInput:'', codeInput:'', expansionChoice:false, joinError:null, createError:null, disconnected:false };
+  ui = { screen:'title', nameInput:'', codeInput:'', customCode:'', useCustomCode:false, expansionChoice:false, joinError:null, createError:null, disconnected:false };
   render();
 }
 
@@ -672,7 +676,6 @@ function hostPlayAgain(){
   hostBroadcast();
 }
 
-/* ================= RENDER ================= */
 function renderApp(){
   stage.innerHTML='';
   if(ui.disconnected){ renderDisconnected(); return; }
@@ -700,7 +703,7 @@ function renderDisconnected(){
     const savedCode = roomView ? roomView.code : '';
     try{ if(peer) peer.destroy(); }catch(e){}
     peer=null; hostConn=null; roomView=null; myPlayerIndex=-1; reqCounter=0; pending=new Map();
-    ui = { screen:'join', nameInput:ui.nameInput, codeInput:savedCode, expansionChoice:false, joinError:null, createError:null, disconnected:false };
+    ui = { screen:'join', nameInput:ui.nameInput, codeInput:savedCode, customCode:'', useCustomCode:false, expansionChoice:false, joinError:null, createError:null, disconnected:false };
     render();
   };
 }
@@ -715,7 +718,7 @@ function renderTitle(){
     <p class="title-sub">竹林に横たわる一体の骸。容疑者は三人。<br>2〜5人で遊ぶ新版</p>
     <div class="notice-box">
       このバージョンは<b>2〜5人</b>対応。ブラウザ同士が<b>WebRTCで直接通信</b>します。<b>部屋を作った人の端末がゲームの進行を管理</b>します。<br><br>
-      <b>ターン中はずっと自分のカードと隣の人のカードが見えます</b>ので、忘れません。<br>
+      <b>部屋番号は自分で決められます</b>（3〜6文字）。<br>
       <b>容疑者カードをタッチして</b>数字を確認します。
     </div>
     <div class="row" style="justify-content:center;">
@@ -746,6 +749,16 @@ function renderCreate(){
       <p>あなたの端末がこの部屋の進行役になります。2〜5人集まったら、あなたが開始ボタンを押してゲームを始めます。<b>ゲームが終わるまで、このタブを閉じないでください。</b></p>
       <label style="font-size:12px;color:var(--ink-soft);">あなたの名前</label>
       <input class="form-input" id="nameInput" placeholder="例：探偵1" value="${ui.nameInput}">
+      
+      <label style="font-size:12px;color:var(--ink-soft);">部屋番号（自分で決める）</label>
+      <div style="display:flex; gap:10px; align-items:center; margin-bottom:12px;">
+        <label style="font-size:13px; display:flex; align-items:center; gap:6px; cursor:pointer;">
+          <input type="checkbox" id="useCustomCode" ${ui.useCustomCode?'checked':''} style="width:18px; height:18px;">
+          自分で部屋番号を決める
+        </label>
+      </div>
+      ${ui.useCustomCode ? `<input class="form-input code-input" id="customCodeInput" maxlength="6" placeholder="例：MYROOM" value="${ui.customCode}" style="text-transform:uppercase;">` : ''}
+      
       <label style="font-size:12px;color:var(--ink-soft);">拡張ルール（容疑者と被害者の入れ替え）</label>
       <div class="count-row" id="expRow"></div>
       <div class="center">
@@ -758,6 +771,20 @@ function renderCreate(){
   stage.appendChild(wrap);
   document.getElementById('createRulesBtn').onclick = openRulesModal;
   document.getElementById('nameInput').oninput = e=>{ ui.nameInput=e.target.value; };
+  
+  const useCustomCheckbox = document.getElementById('useCustomCode');
+  if(useCustomCheckbox){
+    useCustomCheckbox.onchange = e=>{ 
+      ui.useCustomCode = e.target.checked; 
+      render(); 
+    };
+  }
+  
+  const customCodeInput = document.getElementById('customCodeInput');
+  if(customCodeInput){
+    customCodeInput.oninput = e=>{ ui.customCode=e.target.value.toUpperCase(); };
+  }
+  
   const expRow = document.getElementById('expRow');
   [{v:false,label:'使わない'},{v:true,label:'使う'}].forEach(opt=>{
     const b=document.createElement('button');
@@ -776,11 +803,11 @@ function renderJoin(){
   wrap.innerHTML = `
     <div class="card">
       <h2>部屋に入る</h2>
-      <p>ホストから伝えられた4文字の部屋番号を入力してください。</p>
+      <p>ホストから伝えられた部屋番号を入力してください。</p>
       <label style="font-size:12px;color:var(--ink-soft);">あなたの名前</label>
       <input class="form-input" id="nameInput2" placeholder="例：探偵2" value="${ui.nameInput}">
       <label style="font-size:12px;color:var(--ink-soft);">部屋番号</label>
-      <input class="form-input code-input" id="codeInput" maxlength="4" placeholder="XXXX" value="${ui.codeInput}">
+      <input class="form-input code-input" id="codeInput" maxlength="6" placeholder="部屋番号" value="${ui.codeInput}">
       <div class="center">
         <button class="btn primary" id="doJoin">この部屋に入る</button>
       </div>
@@ -942,7 +969,6 @@ function appendLeaveLink(wrap){
   wrap.appendChild(p);
 }
 
-/* My Cards Panel - 表示し続ける */
 function buildMyCardsPanel(){
   const n = roomView.players.length;
   const neighbor = (myPlayerIndex+1)%n;
@@ -982,7 +1008,6 @@ function buildMyCardsPanel(){
   return panel;
 }
 
-/* 覗いた容疑者の値を表示（ターン中ずっと）*/
 function buildPeekedSuspectsPanel(){
   const panel = document.createElement('div');
   panel.className='peeked-suspects-panel';
@@ -1011,7 +1036,6 @@ function buildPeekedSuspectsPanel(){
   return panel;
 }
 
-/* ================= ALIBI PHASE ================= */
 function renderAlibi(){
   if(alibiLocal.round!==roomView.round){ alibiLocal = { round:roomView.round, shown:false, values:null }; }
   const n = roomView.players.length;
@@ -1072,7 +1096,6 @@ function renderAlibi(){
   }
 }
 
-/* ================= TURNS PHASE ================= */
 function turnKey(){ return roomView.round+'-'+roomView.currentPos+'-'+roomView.phase; }
 function ensureTurnLocal(){
   const key = turnKey();
@@ -1091,12 +1114,10 @@ function renderTurns(){
   wrap.appendChild(buildSeatTable({ mini:true, highlightSet:new Set([curIdx]), dim:true }));
   wrap.appendChild(buildScoreboard(curIdx));
   
-  // マイカードパネルを常に表示
   if(alibiLocal.shown){
     wrap.appendChild(buildMyCardsPanel());
   }
   
-  // 覗いた容疑者の値を表示（ターン中ずっと）
   if(turnLocal && turnLocal.peekedValues && Object.keys(turnLocal.peekedValues).length > 0){
     wrap.appendChild(buildPeekedSuspectsPanel());
   }
@@ -1110,14 +1131,17 @@ function renderTurns(){
 
   const suspectsRow = document.createElement('div');
   suspectsRow.className='suspects-row';
+  
+  ensureTurnLocal();
+  const tl = turnLocal;
+  
   for(let i=0;i<3;i++){
     const card = document.createElement('div');
     
-    // 覗いた値があれば表示
-    const peekedValue = turnLocal && turnLocal.peekedValues && turnLocal.peekedValues[i] !== undefined ? turnLocal.peekedValues[i] : null;
+    const peekedValue = tl.peekedValues && tl.peekedValues[i] !== undefined ? tl.peekedValues[i] : null;
     const isPeeked = peekedValue !== null;
-    const isChosen = turnLocal && turnLocal.guessChoice===i;
-    const isSelectedForPeek = turnLocal && turnLocal.chosenTwo && turnLocal.chosenTwo.has(i);
+    const isChosen = tl.guessChoice===i;
+    const isSelectedForPeek = tl.chosenTwo.has(i);
     
     card.className='suspect-card' + (isPeeked ? ' peeked' : '') + (isChosen ? ' chosen' : '') + (isSelectedForPeek ? ' selected-for-peek' : '');
     card.innerHTML = `
@@ -1128,12 +1152,11 @@ function renderTurns(){
       <div class="chip-stack">${roomView.chipsAt[i].map(pi=>`<span class="chip-dot" style="background:${roomView.players[pi].color}">${roomView.players[pi].name.slice(0,1)}</span>`).join('')}</div>
     `;
     
-    // カードをクリック可能に（第一発見者のみ）
-    if(isMyTurn && roomView.currentPos===0 && !turnLocal.evidenceSeen && !isPeeked){
+    if(isMyTurn && roomView.currentPos===0 && !tl.evidenceSeen && !isPeeked){
       card.classList.add('clickable');
       card.onclick = ()=>{
-        if(turnLocal.chosenTwo.size < 2 && !turnLocal.chosenTwo.has(i)){
-          turnLocal.chosenTwo.add(i);
+        if(tl.chosenTwo.size < 2 && !tl.chosenTwo.has(i)){
+          tl.chosenTwo.add(i);
           render();
         }
       };
@@ -1152,8 +1175,6 @@ function renderTurns(){
     return;
   }
 
-  ensureTurnLocal();
-  const tl = turnLocal;
   const isStart = roomView.currentPos===0;
   const actionArea = document.createElement('div');
   actionArea.className='center';
@@ -1173,13 +1194,16 @@ function renderTurns(){
       stage.appendChild(wrap);
       
       if(tl.chosenTwo.size===2){
-        document.getElementById('confirmPeek').onclick = async ()=>{
-          const { result, error } = await Net.peek([...tl.chosenTwo]);
-          if(error) return;
-          tl.peekedValues = result.values;
-          tl.evidenceSeen = true;
-          render();
-        };
+        const confirmBtn = document.getElementById('confirmPeek');
+        if(confirmBtn){
+          confirmBtn.onclick = async ()=>{
+            const { result, error } = await Net.peek([...tl.chosenTwo]);
+            if(error) return;
+            tl.peekedValues = result.values;
+            tl.evidenceSeen = true;
+            render();
+          };
+        }
       }
       return;
     } else {
@@ -1191,13 +1215,16 @@ function renderTurns(){
       `;
       wrap.appendChild(actionArea);
       stage.appendChild(wrap);
-      document.getElementById('viewEvidence').onclick = async ()=>{
-        const { result, error } = await Net.peek([]);
-        if(error) return;
-        tl.peekedValues = result.values;
-        tl.evidenceSeen = true;
-        render();
-      };
+      const viewBtn = document.getElementById('viewEvidence');
+      if(viewBtn){
+        viewBtn.onclick = async ()=>{
+          const { result, error } = await Net.peek([]);
+          if(error) return;
+          tl.peekedValues = result.values;
+          tl.evidenceSeen = true;
+          render();
+        };
+      }
       return;
     }
   }
@@ -1208,21 +1235,22 @@ function renderTurns(){
     wrap.appendChild(actionArea);
     stage.appendChild(wrap);
     const sb = document.getElementById('swapButtons');
-    for(let i=0;i<3;i++){
-      const b=document.createElement('button');
-      b.className='btn small';
-      b.textContent = labels[i]+'と入れ替える';
-      b.onclick=async ()=>{ const {error}=await Net.swap(i); if(error) return; tl.swapDecided=true; render(); };
-      sb.appendChild(b);
+    if(sb){
+      for(let i=0;i<3;i++){
+        const b=document.createElement('button');
+        b.className='btn small';
+        b.textContent = labels[i]+'と入れ替える';
+        b.onclick=async ()=>{ const {error}=await Net.swap(i); if(error) return; tl.swapDecided=true; render(); };
+        sb.appendChild(b);
+      }
+      const skip=document.createElement('button');
+      skip.className='btn small'; skip.textContent='入れ替えない';
+      skip.onclick=async ()=>{ const {error}=await Net.swap('skip'); if(error) return; tl.swapDecided=true; render(); };
+      sb.appendChild(skip);
     }
-    const skip=document.createElement('button');
-    skip.className='btn small'; skip.textContent='入れ替えない';
-    skip.onclick=async ()=>{ const {error}=await Net.swap('skip'); if(error) return; tl.swapDecided=true; render(); };
-    sb.appendChild(skip);
     return;
   }
 
-  // 容疑者カードをクリック可能に（投票用）
   suspectsRow.querySelectorAll('.suspect-card').forEach((el,i)=>{
     if(!el.classList.contains('peeked')){
       el.classList.add('clickable');
@@ -1318,7 +1346,6 @@ function openPeekModal(valuesMap, onClose){
   };
 }
 
-/* ================= REVEAL PHASE ================= */
 function renderReveal(){
   const culprit = roomView.culpritIndex;
   const s = roomView.center.suspects;
@@ -1381,7 +1408,6 @@ function renderReveal(){
   stage.appendChild(wrap);
 }
 
-/* ================= FINAL PHASE ================= */
 function renderFinal(){
   const minFaceDown = Math.min(...roomView.players.map(p=>p.faceDown));
   const winners = roomView.players.filter(p=>p.faceDown===minFaceDown);

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>藪の中 新版 — P2Pオンライン推理ゲーム</title>
+<title>の中 新版 — P2Pオンライン推理ゲーム</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.5/peerjs.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700;800&family=Zen+Old+Mincho:wght@400;600&display=swap');
@@ -87,7 +87,7 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
   transition:all .3s ease;
   box-shadow:0 8px 20px rgba(0,0,0,.15);
 }
-.suspect-card.clickable{ cursor:pointer; }
+.suspect-card.clickable{ cursor:pointer; user-select:none; }
 .suspect-card.clickable:hover{ transform:translateY(-6px); box-shadow:0 14px 28px rgba(0,0,0,.2); }
 .suspect-card.peeked{ 
   border-color:var(--bamboo); 
@@ -99,6 +99,11 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
   background:#f3ead2; 
   box-shadow:0 0 0 4px var(--blood), 0 0 20px rgba(140,47,38,.5);
   animation:pulse 1.5s ease-in-out infinite;
+}
+.suspect-card.selected-for-peek{
+  border-color:var(--gold);
+  background:#fff8dc;
+  box-shadow:0 0 0 3px var(--gold), 0 8px 20px rgba(169,129,63,.3);
 }
 @keyframes pulse{
   0%,100%{ box-shadow:0 0 0 4px var(--blood), 0 0 20px rgba(140,47,38,.5); }
@@ -236,7 +241,7 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
 .mini-card .mini-body{ width:36px; height:32px; background:var(--paper-dark); border-radius:12px 12px 8px 8px; border:1.5px solid var(--ink-soft); display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; }
 .mini-card .mini-label{ font-size:9px; color:var(--ink-soft); margin-top:4px; }
 
-/* 覗いた容疑者の値を表示 */
+/* 覗いた容疑者の値を表示（ターン中ずっと）*/
 .peeked-suspects-panel{
   background:#f0f5e8; border:2px solid var(--bamboo);
   padding:16px; margin:16px 0; border-radius:8px;
@@ -711,7 +716,7 @@ function renderTitle(){
     <div class="notice-box">
       このバージョンは<b>2〜5人</b>対応。ブラウザ同士が<b>WebRTCで直接通信</b>します。<b>部屋を作った人の端末がゲームの進行を管理</b>します。<br><br>
       <b>ターン中はずっと自分のカードと隣の人のカードが見えます</b>ので、忘れません。<br>
-      <b>容疑者を選択すると光って強調</b>され、選びやすくなりました。
+      <b>容疑者カードをタッチして</b>数字を確認します。
     </div>
     <div class="row" style="justify-content:center;">
       <button class="btn primary" id="toCreate">部屋を作る（ホスト）</button>
@@ -992,8 +997,8 @@ function buildPeekedSuspectsPanel(){
       const valueText = val==='blank' ? '白' : val;
       display.innerHTML += `
         <div class="peeked-card">
-          <div class="p-head">人</div>
-          <div class="p-body">${valueText}</div>
+          <div class="p-head">${valueText}</div>
+          <div class="p-body">人</div>
           <div class="p-label">${label}</div>
         </div>
       `;
@@ -1111,9 +1116,10 @@ function renderTurns(){
     // 覗いた値があれば表示
     const peekedValue = turnLocal && turnLocal.peekedValues && turnLocal.peekedValues[i] !== undefined ? turnLocal.peekedValues[i] : null;
     const isPeeked = peekedValue !== null;
-    const isChosen = turnLocal && turnLocal.chosenTwo && turnLocal.chosenTwo.has(i);
+    const isChosen = turnLocal && turnLocal.guessChoice===i;
+    const isSelectedForPeek = turnLocal && turnLocal.chosenTwo && turnLocal.chosenTwo.has(i);
     
-    card.className='suspect-card' + (isPeeked ? ' peeked' : '') + (isChosen ? ' chosen' : '');
+    card.className='suspect-card' + (isPeeked ? ' peeked' : '') + (isChosen ? ' chosen' : '') + (isSelectedForPeek ? ' selected-for-peek' : '');
     card.innerHTML = `
       <div class="s-label">${labels[i]}</div>
       <div class="head">${isPeeked ? (peekedValue==='blank'?'白':peekedValue) : ''}</div>
@@ -1126,7 +1132,7 @@ function renderTurns(){
     if(isMyTurn && roomView.currentPos===0 && !turnLocal.evidenceSeen && !isPeeked){
       card.classList.add('clickable');
       card.onclick = ()=>{
-        if(turnLocal.chosenTwo.size < 2){
+        if(turnLocal.chosenTwo.size < 2 && !turnLocal.chosenTwo.has(i)){
           turnLocal.chosenTwo.add(i);
           render();
         }
@@ -1158,7 +1164,7 @@ function renderTurns(){
       const remaining = 2 - tl.chosenTwo.size;
       actionArea.innerHTML = `
         <p style="font-size:13px;color:var(--ink-soft);max-width:420px;margin:0 auto 14px;">
-          あなたは第一発見者。容疑者3人のうち、好きな2人を<b>タッチして数字を確かめよ</b>。<br>
+          あなたは第一発見者。<b>容疑者カードをタッチして</b>、好きな2人の数字を確かめよ。<br>
           <span style="color:var(--blood); font-weight:600;">残り ${remaining} 人選択可能</span>
         </p>
         ${tl.chosenTwo.size===2 ? `<button class="btn primary" id="confirmPeek">確認完了</button>` : ''}
@@ -1177,8 +1183,12 @@ function renderTurns(){
       }
       return;
     } else {
-      actionArea.innerHTML = `<p style="font-size:13px;color:var(--ink-soft);max-width:420px;margin:0 auto 14px;">前の人が犯人だと示した場所を除く、残り2人の証拠を確認する。</p>
-        <button class="btn small" id="viewEvidence">証拠を確認する</button>`;
+      actionArea.innerHTML = `
+        <p style="font-size:13px;color:var(--ink-soft);max-width:420px;margin:0 auto 14px;">
+          前の人が犯人だと示した場所以外、残り2人の<b>容疑者カードをタッチして</b>数字を確認せよ。
+        </p>
+        <button class="btn small" id="viewEvidence">証拠を確認する</button>
+      `;
       wrap.appendChild(actionArea);
       stage.appendChild(wrap);
       document.getElementById('viewEvidence').onclick = async ()=>{

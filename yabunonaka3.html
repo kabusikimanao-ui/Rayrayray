@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>藪の中 新版 — P2Pオンライン推理ゲーム</title>
+<title>藪の中 — P2P Online Deduction Game</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.5/peerjs.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700;800&family=Zen+Old+Mincho:wght@400;600&display=swap');
@@ -27,13 +27,14 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
 .btn{
   font-family:'Shippori Mincho',serif; border:1px solid var(--ink); background:transparent; color:var(--ink);
   padding:14px 28px; font-size:15px; letter-spacing:.2em; cursor:pointer; transition:all .2s ease;
-  min-height:48px; /* モバイル用タッチターゲット */
+  min-height:48px;
 }
 .btn:hover{ background:var(--ink); color:var(--paper); }
 .btn:disabled{ opacity:.32; cursor:not-allowed; }
 .btn.primary{ border-color:var(--blood); color:var(--blood); }
 .btn.primary:hover{ background:var(--blood); color:var(--paper); }
 .btn.small{ padding:10px 18px; font-size:13px; min-height:40px; }
+.btn.icon-btn{ padding:8px 12px; min-height:36px; font-size:12px; }
 .row{ display:flex; gap:10px; flex-wrap:wrap; }
 .center{ text-align:center; }
 .err-text{ color:var(--blood); font-size:12.5px; margin-top:8px; }
@@ -77,7 +78,6 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
 .score-chip .sc-nums{ color:var(--ink-soft); display:flex; gap:8px; }
 .score-chip.turn{ box-shadow:0 0 0 2px var(--blood) inset; }
 
-/* 人型カード - モバイル最適化 */
 .suspects-row{ display:flex; justify-content:center; gap:16px; margin-top:16px; flex-wrap:wrap; }
 .suspect-card{ 
   width:100px; height:160px; 
@@ -127,7 +127,6 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
   font-size:14px;
   box-shadow:0 0 12px rgba(140,47,38,.6);
   animation:flipGlow 2s ease-in-out infinite;
-  /* 色覚バリアフリー：斜線パターン */
   background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,.1) 3px, rgba(255,255,255,.1) 6px);
 }
 @keyframes flipGlow{
@@ -315,12 +314,36 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
 .fade{ animation:f .4s ease both; }
 @keyframes f{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
 
-/* チャット機能 */
+/* チャットパネル - 折りたたみ可能 */
 .chat-panel{
   position:fixed; bottom:0; left:0; right:0;
   background:var(--paper); border-top:2px solid var(--paper-deep);
   padding:10px; z-index:40;
   max-width:800px; margin:0 auto;
+  transition:all .3s ease;
+}
+.chat-panel.collapsed{
+  max-height:40px;
+  overflow:hidden;
+}
+.chat-panel.collapsed .chat-messages,
+.chat-panel.collapsed .chat-input-row{
+  display:none;
+}
+.chat-header{
+  display:flex; justify-content:space-between; align-items:center;
+  margin-bottom:8px; cursor:pointer;
+}
+.chat-header-title{
+  font-size:12px; font-weight:600; color:var(--ink-soft);
+  letter-spacing:.1em;
+}
+.chat-toggle{
+  font-size:16px; color:var(--ink-soft);
+  transition:transform .3s ease;
+}
+.chat-panel.collapsed .chat-toggle{
+  transform:rotate(180deg);
 }
 .chat-messages{
   height:120px; overflow-y:auto;
@@ -335,6 +358,17 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
 .chat-input{ flex:1; padding:8px 12px; border:1px solid var(--paper-deep); background:#fff; border-radius:4px; font-family:inherit; font-size:13px; }
 .chat-send{ padding:8px 16px; background:var(--bamboo); color:#fff; border:none; border-radius:4px; cursor:pointer; font-family:inherit; }
 
+/* 言語切り替えボタン */
+.lang-switch{
+  position:fixed; top:10px; right:10px;
+  z-index:60;
+}
+.lang-btn{
+  background:var(--paper); border:1px solid var(--paper-deep);
+  padding:8px 12px; border-radius:4px; cursor:pointer;
+  font-family:inherit; font-size:12px;
+}
+
 /* モバイル用メディア queries */
 @media (max-width: 480px) {
   .suspect-card{ width:90px; height:145px; }
@@ -348,20 +382,202 @@ h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; }
 <body>
 <div class="stage" id="stage"></div>
 
+<!-- 言語切り替え -->
+<div class="lang-switch">
+  <button class="lang-btn" id="langBtn" onclick="toggleLanguage()">English</button>
+</div>
+
 <!-- チャットパネル -->
-<div class="chat-panel" id="chatPanel" style="display:none;">
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-header" onclick="toggleChat()">
+    <span class="chat-header-title" data-i18n="chat">チャット</span>
+    <span class="chat-toggle">▼</span>
+  </div>
   <div class="chat-messages" id="chatMessages"></div>
   <div class="chat-input-row">
     <input type="text" class="chat-input" id="chatInput" placeholder="メッセージを入力..." maxlength="100">
-    <button class="chat-send" id="chatSend">送信</button>
+    <button class="chat-send" id="chatSend" data-i18n="send">送信</button>
   </div>
 </div>
 
 <script>
-(function(){
+// 多言語対応
+const i18n = {
+  ja: {
+    chat: 'チャット',
+    send: '送信',
+    createRoom: '部屋を作る（ホスト）',
+    joinRoom: '部屋に入る',
+    howToPlay: '遊び方・ルールを見る',
+    enterName: 'あなたの名前',
+    roomCode: '部屋番号',
+    customRoomCode: '自分で部屋番号を決める',
+    expansionRule: '拡張ルール（容疑者と被害者の入れ替え）',
+    dontUse: '使わない',
+    use: '使う',
+    create: '部屋を作成する',
+    join: 'この部屋に入る',
+    back: '戻る',
+    start: '捜査を開始する',
+    waiting: 'ホストの開始を待っています',
+    waitingFor: 'を確認中',
+    confirm: '確認完了',
+    viewEvidence: '証拠を確認する',
+    next: '決定して次の人へ',
+    finalTruth: '全員の証言が出そろった — 真相を確かめる',
+    swap: 'と入れ替える',
+    noSwap: '入れ替えない',
+    culprit: '真犯人',
+    victim: '被害者',
+    suspect: '容疑者',
+    unseen: '見なかった',
+    confirmed: '確認済',
+    yourTurn: 'あなたの手番',
+    waitingOther: '他のプレイヤーを待っています',
+    round: '第',
+    turn: '手番',
+    alibi: 'アリバイ確認',
+    reveal: '真相解明',
+    result: '結果',
+    gameEnd: '捜査終了',
+    playAgain: 'もう一度、同じ面子で',
+    leave: '退出する',
+    disconnected: 'ホストとの接続が切れました',
+    reconnect: '部屋番号を入力し直す',
+    minimumPlayers: '最低2人集まると開始できます',
+    maxPlayers: '最大5人',
+    flip5: '「↓5↑」は特別な数字（flip）です',
+    rules: {
+      title: '遊び方 — の中',
+      overview: '概要',
+      overviewText: '竹林で一体の骸が見つかった。現場には「被害者」1枚と「容疑者」3枚(容疑者A・B・C)の数字タイルが伏せられている。プレイヤーは2〜5人。全員が少しずつ違う手がかりを持ち寄り、証言を重ねながら「本当の犯人」を推理する。',
+      alibiPhase: ' アリバイ確認フェーズ',
+      alibiText: '各ラウンドの最初に、現場の4枚とは別の「事件と無関係な人物」のタイルが、自分と隣の人にそれぞれ配られる。両方を確認すると、「少なくともこの2つの数字は容疑者・被害者には含まれない」という除外情報が手に入る。このカードはターン中ずっと画面に表示され続けるので、忘れません。全員が確認を終えると次のフェーズへ進む。',
+      testimonyPhase: ' 証言フェーズ（手番）',
+      firstDetective: '第一発見者（一番手）',
+      firstDetectiveText: '容疑者カードを直接タッチして、好きな2人の数字を覗く。残り1人は「見なかった」として周囲に伝わる（数字自体は非公開）。確認した数字はカード自体に表示され、ターン中ずっと見える。拡張ルール使用時は、被害者と容疑者1人のタイルを入れ替えるかどうかも選べる（数字は公開されない）。最後に、犯人だと思う容疑者1人にチップを置く。',
+      otherPlayers: '2番手以降',
+      otherPlayersText: '直前の人がチップを置いた容疑者を除く、残り2人の数字を確認できる。同じように、犯人だと思う容疑者にチップを置く。',
+      highlight: '容疑者を選択すると、カードが光って強調表示されます。全員がチップを置き終えたら、真相解明フェーズに移る。',
+      culpritRule: '③ 真犯人の見分け方',
+      hasFive: '容疑者3人の中に「↓5↑」がいる場合 → 最も小さい数字の容疑者が真犯人。',
+      noFive: '「↓5↑」がいない場合 → 最も大きい数字の容疑者が真犯人。',
+      noCulprit: '3人とも白紙の場合 → 犯人なし（ありえない組み合わせ）。',
+      flipNote: '「↓5↑」は特別な数字（flip）です。赤く光って表示され、ゲームの勝敗を大きく左右します。',
+      chipSettlement: '④ チップの精算',
+      correctGuess: '真犯人にチップを置いていた人は、チップが無事に戻ってくる。',
+      wrongGuess: '外れた容疑者にチップを置いていた人たちは、全員「手持ち」を1枚失う。さらに、その山に最後にチップを置いた人が、山にあったチップ全部を「失敗チップ」としてまとめて引き取る。',
+      endGame: ' 終了と勝敗',
+      endGameText: 'ラウンド終了時に、誰かの「失敗チップ」が8枚以上、または「手持ち」が0枚になっていたら、そこで捜査終了。「失敗チップ」が最も少ない人が勝者。そうでなければ、次のラウンドへ進む（第一発見者は一人ずつ交代する）。',
+      note: 'ホストの端末がゲーム全体の進行を管理し、他の人には見せてよい情報だけを送るので、隠すべき数字は自分の画面にしか表示されません。',
+      close: '閉じる'
+    }
+  },
+  en: {
+    chat: 'Chat',
+    send: 'Send',
+    createRoom: 'Create Room (Host)',
+    joinRoom: 'Join Room',
+    howToPlay: 'How to Play',
+    enterName: 'Your Name',
+    roomCode: 'Room Code',
+    customRoomCode: 'Set Custom Room Code',
+    expansionRule: 'Expansion Rule (Swap Suspect & Victim)',
+    dontUse: "Don't Use",
+    use: 'Use',
+    create: 'Create Room',
+    join: 'Join Room',
+    back: 'Back',
+    start: 'Start Investigation',
+    waiting: 'Waiting for host to start',
+    waitingFor: 'Waiting for',
+    confirm: 'Confirm',
+    viewEvidence: 'View Evidence',
+    next: 'Confirm & Next Player',
+    finalTruth: "All testimonies ready — Reveal the truth",
+    swap: 'Swap with',
+    noSwap: "Don't Swap",
+    culprit: 'Culprit',
+    victim: 'Victim',
+    suspect: 'Suspect',
+    unseen: 'Unseen',
+    confirmed: 'Confirmed',
+    yourTurn: 'Your Turn',
+    waitingOther: 'Waiting for other players',
+    round: 'Round',
+    turn: 'Turn',
+    alibi: 'Alibi Check',
+    reveal: 'Reveal Truth',
+    result: 'Result',
+    gameEnd: 'Investigation Complete',
+    playAgain: 'Play Again',
+    leave: 'Leave Room',
+    disconnected: 'Disconnected from host',
+    reconnect: 'Re-enter Room Code',
+    minimumPlayers: 'Minimum 2 players required',
+    maxPlayers: 'Max 5 players',
+    flip5: '"↓5↑" is a special number (flip)',
+    rules: {
+      title: 'How to Play — In a Grove',
+      overview: 'Overview',
+      overviewText: 'A corpse was found in a bamboo grove. At the scene are 1 "Victim" tile and 3 "Suspect" tiles (Suspects A, B, C) placed face down. 2-5 players work together, each gathering different clues and sharing testimonies to deduce the "true culprit".',
+      alibiPhase: '① Alibi Check Phase',
+      alibiText: 'At the start of each round, tiles of "people unrelated to the case" are dealt to you and your neighbor. By checking both, you gain exclusion information that "at least these 2 numbers are not among the suspects or victim". These cards remain displayed throughout your turn so you won\'t forget. When everyone finishes checking, proceed to the next phase.',
+      testimonyPhase: '② Testimony Phase (Turns)',
+      firstDetective: 'First Detective (1st Player)',
+      firstDetectiveText: 'Touch suspect cards directly to peek at 2 people\'s numbers. The remaining 1 is marked as "unseen" to others (number itself hidden). Peeked numbers are displayed on the cards and remain visible throughout the turn. With expansion rule, you can choose whether to swap the victim tile with 1 suspect tile (number not revealed). Finally, place your chip on the suspect you believe is the culprit.',
+      otherPlayers: '2nd Player Onwards',
+      otherPlayersText: 'Excluding the suspect where the previous player placed their chip, check the numbers of the remaining 2. Similarly, place your chip on the suspect you believe is the culprit.',
+      highlight: 'When you select a suspect, the card glows for emphasis. When everyone places their chips, proceed to the truth revelation phase.',
+      culpritRule: '③ Identifying the True Culprit',
+      hasFive: 'If "↓5↑" is among the 3 suspects → The suspect with the smallest number is the true culprit.',
+      noFive: 'If "↓5↑" is not present → The suspect with the largest number is the true culprit.',
+      noCulprit: 'If all 3 are blank → No culprit (impossible combination).',
+      flipNote: '"↓5↑" is a special number (flip). It glows red and greatly affects the game outcome.',
+      chipSettlement: '④ Chip Settlement',
+      correctGuess: 'Players who placed chips on the true culprit get their chips back safely.',
+      wrongGuess: 'Players who placed chips on wrong suspects each lose 1 "hand" chip. Furthermore, the person who placed the last chip on that pile takes all chips from that pile as "failure chips".',
+      endGame: '⑤ End Game & Victory',
+      endGameText: 'At round end, if anyone has 8 or more "failure chips" or 0 "hand" chips, the investigation ends. The player with the fewest "failure chips" wins. Otherwise, proceed to the next round (first detective rotates).',
+      note: 'The host\'s device manages the entire game progression and only sends information that should be shown to others, so hidden numbers only appear on your own screen.',
+      close: 'Close'
+    }
+  }
+};
+
+let currentLang = 'ja';
+
+function toggleLanguage() {
+  currentLang = currentLang === 'ja' ? 'en' : 'ja';
+  document.getElementById('langBtn').textContent = currentLang === 'ja' ? 'English' : '日本語';
+  document.documentElement.lang = currentLang;
+  updateTexts();
+  render();
+}
+
+function t(key) {
+  const keys = key.split('.');
+  let obj = i18n[currentLang];
+  for (const k of keys) {
+    obj = obj[k];
+  }
+  return obj || key;
+}
+
+function updateTexts() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    el.textContent = t(key);
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    el.placeholder = t(key);
+  });
+}
+
 const PLAYER_COLORS = ['#8c2f26','#2c4a6b','#4f6b3f','#6b4f8c','#8b4513'];
 const stage = document.getElementById('stage');
-const labels = ['容疑者 A','容疑者 B','容疑者 C'];
+const labels = currentLang === 'ja' ? ['容疑者 A','容疑者 B','容疑者 C'] : ['Suspect A','Suspect B','Suspect C'];
 const PeerCtor = (typeof window!=='undefined' && window.Peer) ? window.Peer : (typeof Peer!=='undefined'? Peer : null);
 
 let isHost = false;
@@ -376,11 +592,12 @@ let pending = new Map();
 let ui = { screen:'title', nameInput:'', codeInput:'', customCode:'', useCustomCode:false, expansionChoice:false, joinError:null, createError:null, disconnected:false };
 let turnLocal = null;
 let alibiLocal = { round:null, shown:false, values:null };
-let chatMessages = []; // チャット履歴
+let chatMessages = [];
+let chatCollapsed = false;
 
 function formatFlipValue(val){
   if(val === 5) return '↓5↑';
-  if(val === 'blank') return '白';
+  if(val === 'blank') return currentLang === 'ja' ? '白' : 'Blank';
   return String(val);
 }
 
@@ -438,13 +655,19 @@ function resolveChipsInto(doc){
     if(chips.length===0) continue;
     if(i===culprit){
       const names = chips.map(pi=>doc.players[pi].name);
-      log.push({correct:true, text:`${labels[i]}（正解）を指した ${names.join('・')} のチップは無事に戻った。`});
+      log.push({correct:true, text: currentLang === 'ja' ? 
+        `${labels[i]}（正解）を指した ${names.join('・')} のチップは無事に戻った。` :
+        `Chips from ${names.join(', ')} pointing to ${labels[i]} (correct) returned safely.`
+      });
     } else {
       const collector = chips[chips.length-1];
       const names = chips.map(pi=>doc.players[pi].name);
       chips.forEach(pi=>{ doc.players[pi].faceUp = Math.max(0, doc.players[pi].faceUp-1); });
       doc.players[collector].faceDown += chips.length;
-      log.push({correct:false, text:`${labels[i]}（外れ）——最後にチップを置いた ${doc.players[collector].name} が、${names.join('・')} のチップ計${chips.length}枚をまとめて失敗チップとして引き取った。`});
+      log.push({correct:false, text: currentLang === 'ja' ?
+        `${labels[i]}（外れ）——最後にチップを置いた ${doc.players[collector].name} が、${names.join('・')} のチップ計${chips.length}枚をまとめて失敗チップとして引き取った。` :
+        `${labels[i]} (wrong) — ${doc.players[collector].name}, who placed the last chip, took all ${chips.length} chips from ${names.join(', ')} as failure chips.`
+      });
     }
   }
   doc.culpritIndex = culprit;
@@ -485,20 +708,20 @@ function actJoin(doc, name, connId, token){
       return { result:{ playerIndex: candidateIdx, reconnected:true }, changed:true };
     }
   }
-  if(doc.phase!=='lobby') return { error:'この部屋はすでにゲームを開始しています。' };
-  if(doc.players.length>=5) return { error:'この部屋は満員です（最大5人）。' };
+  if(doc.phase!=='lobby') return { error: currentLang === 'ja' ? 'この部屋はすでにゲームを開始しています。' : 'This room has already started the game.' };
+  if(doc.players.length>=5) return { error: currentLang === 'ja' ? 'この部屋は満員です（最大5人）。' : 'This room is full (max 5 players).' };
   const idx = doc.players.length;
-  doc.players.push({ id: connId||'HOST', token: token||null, name: name||`探偵${idx+1}`, color: PLAYER_COLORS[idx], faceUp:5, faceDown:0 });
+  doc.players.push({ id: connId||'HOST', token: token||null, name: name|| (currentLang === 'ja' ? `探偵${idx+1}` : `Detective${idx+1}`), color: PLAYER_COLORS[idx], faceUp:5, faceDown:0 });
   return { result:{ playerIndex: idx, reconnected:false }, changed:true };
 }
 
 function actPeek(doc, senderIdx, indices){
-  if(doc.phase!=='turns' || doc.turnOrder[doc.currentPos]!==senderIdx) return { error:'あなたの手番ではありません。' };
+  if(doc.phase!=='turns' || doc.turnOrder[doc.currentPos]!==senderIdx) return { error: currentLang === 'ja' ? 'あなたの手番ではありません。' : 'It\'s not your turn.' };
   const isStart = doc.currentPos===0;
   let use;
   if(isStart){
     const req = Array.isArray(indices) ? [...new Set(indices)] : [];
-    if(req.length!==2 || req.some(i=>![0,1,2].includes(i))) return { error:'不正な要求です。' };
+    if(req.length!==2 || req.some(i=>![0,1,2].includes(i))) return { error: currentLang === 'ja' ? '不正な要求です。' : 'Invalid request.' };
     use = req;
     doc._pendingUnseen = [0,1,2].find(x=>!use.includes(x));
   } else {
@@ -512,23 +735,23 @@ function actPeek(doc, senderIdx, indices){
 }
 
 function actAlibi(doc, senderIdx){
-  if(doc.phase!=='alibi') return { error:'フェーズが違います。' };
+  if(doc.phase!=='alibi') return { error: currentLang === 'ja' ? 'フェーズが違います。' : 'Wrong phase.' };
   const n = doc.players.length;
   const neighbor = (senderIdx+1)%n;
   return { result:{ mine: doc.privateTiles[senderIdx], neighbor: doc.privateTiles[neighbor], neighborName: doc.players[neighbor].name }, changed:false };
 }
 
 function actAckAlibi(doc, senderIdx){
-  if(doc.phase!=='alibi') return { error:'フェーズが違います。' };
+  if(doc.phase!=='alibi') return { error: currentLang === 'ja' ? 'フェーズが違います。' : 'Wrong phase.' };
   doc.alibiAcked[senderIdx] = true;
   if(doc.alibiAcked.every(Boolean)){ doc.phase='turns'; doc.currentPos=0; }
   return { result:{ ok:true }, changed:true };
 }
 
 function actSwap(doc, senderIdx, choice){
-  if(doc.phase!=='turns' || doc.currentPos!==0 || doc.turnOrder[0]!==senderIdx || !doc.expansionEnabled) return { error:'不正な要求です。' };
+  if(doc.phase!=='turns' || doc.currentPos!==0 || doc.turnOrder[0]!==senderIdx || !doc.expansionEnabled) return { error: currentLang === 'ja' ? '不正な要求です。' : 'Invalid request.' };
   if(choice!=='skip'){
-    if(![0,1,2].includes(choice)) return { error:'不正な要求です。' };
+    if(![0,1,2].includes(choice)) return { error: currentLang === 'ja' ? '不正な要求です。' : 'Invalid request.' };
     const tmp = doc.center.suspects[choice];
     doc.center.suspects[choice] = doc.center.victim;
     doc.center.victim = tmp;
@@ -538,8 +761,8 @@ function actSwap(doc, senderIdx, choice){
 }
 
 function actGuess(doc, senderIdx, suspectIdx){
-  if(doc.phase!=='turns' || doc.turnOrder[doc.currentPos]!==senderIdx) return { error:'あなたの手番ではありません。' };
-  if(![0,1,2].includes(suspectIdx)) return { error:'不正な要求です。' };
+  if(doc.phase!=='turns' || doc.turnOrder[doc.currentPos]!==senderIdx) return { error: currentLang === 'ja' ? 'あなたの手番ではありません。' : 'It\'s not your turn.' };
+  if(![0,1,2].includes(suspectIdx)) return { error: currentLang === 'ja' ? '不正な要求です。' : 'Invalid request.' };
   if(doc.currentPos===0 && doc._pendingUnseen!==undefined){ doc.unseenIdx = doc._pendingUnseen; delete doc._pendingUnseen; }
   doc.guesses[senderIdx] = suspectIdx;
   doc.chipsAt[suspectIdx].push(senderIdx);
@@ -585,9 +808,8 @@ function hostHandleRequest(conn, msg){
 
   if(msg.type==='pong'){ return; }
   if(msg.type==='chat'){
-    // チャットメッセージをブロードキャスト
     const entry = connections.get(conn.peer);
-    const senderName = entry ? room.players[entry.playerIndex]?.name : '不明';
+    const senderName = entry ? room.players[entry.playerIndex]?.name : (currentLang === 'ja' ? '不明' : 'Unknown');
     const chatMsg = { name: senderName, text: msg.payload.text, ts: Date.now() };
     broadcastChat(chatMsg);
     return;
@@ -607,7 +829,7 @@ function hostHandleRequest(conn, msg){
     else if(msg.type==='ackAlibi') out = actAckAlibi(room, senderIdx);
     else if(msg.type==='swap') out = actSwap(room, senderIdx, msg.payload.choice);
     else if(msg.type==='guess') out = actGuess(room, senderIdx, msg.payload.suspectIdx);
-    else out = { error:'不明な要求です。' };
+    else out = { error: currentLang === 'ja' ? '不明な要求です。' : 'Unknown request.' };
   }
   try{ conn.send({ type:'response', id:msg.id, payload: out.result||null, error: out.error||null }); }catch(e){}
   if(out.changed) hostBroadcast();
@@ -639,7 +861,7 @@ const Net = {
   guess(suspectIdx){ return isHost ? hostSelfAction('guess',{suspectIdx}) : sendToHost('guess',{suspectIdx}); },
   chat(text){ 
     if(isHost){
-      const chatMsg = { name: room.players[myPlayerIndex]?.name || 'あなた', text, ts: Date.now() };
+      const chatMsg = { name: room.players[myPlayerIndex]?.name || (currentLang === 'ja' ? 'あなた' : 'You'), text, ts: Date.now() };
       broadcastChat(chatMsg);
     } else {
       hostConn.send({ type:'chat', payload:{ text } });
@@ -649,7 +871,7 @@ const Net = {
 
 function broadcastChat(chatMsg){
   chatMessages.push(chatMsg);
-  if(chatMessages.length > 50) chatMessages.shift(); // 最新50件まで
+  if(chatMessages.length > 50) chatMessages.shift();
   connections.forEach(({conn})=>{ if(conn && conn.open) conn.send({type:'chat', payload:chatMsg}); });
   renderChat();
 }
@@ -685,7 +907,7 @@ function tryClaimPeerId(id){
 }
 
 async function createRoom(){
-  const name = (ui.nameInput||'').trim() || '探偵1';
+  const name = (ui.nameInput||'').trim() || (currentLang === 'ja' ? '探偵1' : 'Detective1');
   ui.screen='connecting'; ui.createError=null; render();
   
   let code;
@@ -693,7 +915,7 @@ async function createRoom(){
     code = ui.customCode.toUpperCase().trim();
     if(code.length < 3 || code.length > 6){
       ui.screen='create'; 
-      ui.createError='部屋番号は3〜6文字で入力してください。'; 
+      ui.createError = currentLang === 'ja' ? '部屋番号は3〜6文字で入力してください。' : 'Room code must be 3-6 characters.';
       render(); 
       return;
     }
@@ -704,7 +926,7 @@ async function createRoom(){
   let p = await tryClaimPeerId('yabu-'+code);
   if(!p){ 
     ui.screen='create'; 
-    ui.createError='この部屋番号はすでに使用されています。別の番号を入力してください。'; 
+    ui.createError = currentLang === 'ja' ? 'この部屋番号はすでに使用されています。別の番号を入力してください。' : 'This room code is already in use. Please try another.';
     render(); 
     return; 
   }
@@ -739,7 +961,7 @@ function getOrCreateToken(code){
 function joinRoom(){
   const code = (ui.codeInput||'').trim().toUpperCase();
   const name = (ui.nameInput||'').trim();
-  if(!code){ ui.joinError='部屋番号を入力してください。'; render(); return; }
+  if(!code){ ui.joinError = currentLang === 'ja' ? '部屋番号を入力してください。' : 'Please enter a room code.'; render(); return; }
   ui.screen='connecting'; ui.joinError=null; ui.disconnected=false; render();
   isHost = false;
   const token = getOrCreateToken(code);
@@ -759,7 +981,9 @@ function joinRoom(){
   peer.on('error', err=>{
     if(ui.screen!=='connecting') return;
     ui.screen='join';
-    ui.joinError = (err && err.type==='peer-unavailable') ? 'その部屋は見つかりません。番号を確認してください。' : ('接続エラーが発生しました（'+(err&&err.type||'unknown')+'）。');
+    ui.joinError = (err && err.type==='peer-unavailable') ? 
+      (currentLang === 'ja' ? 'その部屋は見つかりません。番号を確認してください。' : 'Room not found. Please check the code.') : 
+      (currentLang === 'ja' ? '接続エラーが発生しました。' : 'Connection error occurred.');
     render();
   });
 }
@@ -812,12 +1036,24 @@ function renderApp(){
   if(roomView.phase==='final'){ renderFinal(); return; }
 }
 
+function toggleChat(){
+  chatCollapsed = !chatCollapsed;
+  const panel = document.getElementById('chatPanel');
+  if(panel){
+    if(chatCollapsed){
+      panel.classList.add('collapsed');
+    } else {
+      panel.classList.remove('collapsed');
+    }
+  }
+}
+
 function renderChat(){
   const panel = document.getElementById('chatPanel');
   const messages = document.getElementById('chatMessages');
   if(!panel || !messages) return;
   
-  if(roomView && roomView.phase !== 'lobby'){
+  if(roomView && (roomView.phase !== 'lobby' || chatMessages.length > 0)){
     panel.style.display = 'block';
   } else {
     panel.style.display = 'none';
@@ -835,8 +1071,8 @@ function renderDisconnected(){
   wrap.className='title-screen fade';
   wrap.innerHTML = `
     <div class="seal">切</div>
-    <p class="title-sub">ホストとの接続が切れました。<br>同じ部屋番号でもう一度入れば、元の探偵として復帰できます。</p>
-    <button class="btn primary" id="backAfterDisconnect">部屋番号を入力し直す</button>
+    <p class="title-sub">${t('disconnected')}<br>${t('reconnect')}</p>
+    <button class="btn primary" id="backAfterDisconnect">${t('reconnect')}</button>
   `;
   stage.appendChild(wrap);
   const btn = document.getElementById('backAfterDisconnect');
@@ -855,21 +1091,27 @@ function renderTitle(){
   const wrap = document.createElement('div');
   wrap.className='title-screen fade';
   wrap.innerHTML = `
-    <div class="title-eyebrow">P2Pオンライン推理ゲーム</div>
-    <div class="seal">検</div>
-    <h1 class="title-main">藪の中</h1>
-    <p class="title-sub">竹林に横たわる一体の骸。容疑者は三人。<br>2〜5人で遊ぶ新版</p>
+    <div class="title-eyebrow">P2P ${currentLang === 'ja' ? 'オンライン推理ゲーム' : 'Online Deduction Game'}</div>
+    <div class="seal">${currentLang === 'ja' ? '検' : 'INV'}</div>
+    <h1 class="title-main">${currentLang === 'ja' ? 'の中' : 'In a Grove'}</h1>
+    <p class="title-sub">${currentLang === 'ja' ? '竹林に横たわる一体の骸。容疑者は三人。<br>2〜5人で遊ぶ新版' : 'A corpse lies in the bamboo grove. Three suspects.<br>New version for 2-5 players'}</p>
     <div class="notice-box">
-      このバージョンは<b>2〜5人</b>対応。ブラウザ同士が<b>WebRTCで直接通信</b>します。<b>部屋を作った人の端末がゲームの進行を管理</b>します。<br><br>
-      <b>部屋番号は自分で決められます</b>（3〜6文字）。<br>
-      <b>容疑者カードをタッチして</b>数字を確認します。<br>
-      <b style="color:var(--blood);">「↓5↑」は特別な数字</b>（flip）です。
+      ${currentLang === 'ja' ? 
+        `このバージョンは<b>2〜5人</b>対応。ブラウザ同士が<b>WebRTCで直接通信</b>します。<b>部屋を作った人の端末がゲームの進行を管理</b>します。<br><br>
+        <b>部屋番号は自分で決められます</b>（3〜6文字）。<br>
+        <b>容疑者カードをタッチして</b>数字を確認します。<br>
+        <b style="color:var(--blood);">「↓5↑」は特別な数字</b>（flip）です。` :
+        `This version supports <b>2-5 players</b>. Browsers communicate directly via <b>WebRTC</b>. <b>The host's device manages game progression</b>.<br><br>
+        <b>You can set your own room code</b> (3-6 characters).<br>
+        <b>Touch suspect cards</b> to check numbers.<br>
+        <b style="color:var(--blood);">"↓5↑" is a special number</b> (flip).`
+      }
     </div>
     <div class="row" style="justify-content:center;">
-      <button class="btn primary" id="toCreate">部屋を作る（ホスト）</button>
-      <button class="btn" id="toJoin">部屋に入る</button>
+      <button class="btn primary" id="toCreate" data-i18n="createRoom">${t('createRoom')}</button>
+      <button class="btn" id="toJoin" data-i18n="joinRoom">${t('joinRoom')}</button>
     </div>
-    <div class="center" style="margin-top:16px;"><button class="rules-link" id="titleRulesBtn">遊び方・ルールを見る</button></div>
+    <div class="center" style="margin-top:16px;"><button class="rules-link" id="titleRulesBtn" data-i18n="howToPlay">${t('howToPlay')}</button></div>
   `;
   stage.appendChild(wrap);
   const c1 = document.getElementById('toCreate');
@@ -883,7 +1125,7 @@ function renderTitle(){
 function renderConnecting(){
   const wrap = document.createElement('div');
   wrap.className='title-screen fade';
-  wrap.innerHTML = `<div class="seal">…</div><p class="title-sub">接続しています<span class="wait-dots"></span></p>`;
+  wrap.innerHTML = `<div class="seal">…</div><p class="title-sub">${currentLang === 'ja' ? '接続しています' : 'Connecting'}<span class="wait-dots"></span></p>`;
   stage.appendChild(wrap);
 }
 
@@ -892,27 +1134,27 @@ function renderCreate(){
   wrap.className='fade';
   wrap.innerHTML = `
     <div class="card">
-      <h2>部屋を作る</h2>
-      <p>あなたの端末がこの部屋の進行役になります。2〜5人集まったら、あなたが開始ボタンを押してゲームを始めます。<b>ゲームが終わるまで、このタブを閉じないでください。</b></p>
-      <label style="font-size:12px;color:var(--ink-soft);">あなたの名前</label>
-      <input class="form-input" id="nameInput" placeholder="例：探偵1" value="${ui.nameInput}">
+      <h2>${currentLang === 'ja' ? '部屋を作る' : 'Create Room'}</h2>
+      <p>${currentLang === 'ja' ? 'あなたの端末がこの部屋の進行役になります。2〜5人集まったら、あなたが開始ボタンを押してゲームを始めます。<b>ゲームが終わるまで、このタブを閉じないでください。</b>' : 'Your device will host this room. When 2-5 players gather, press the start button to begin. <b>Do not close this tab until the game ends.</b>'}</p>
+      <label style="font-size:12px;color:var(--ink-soft);" data-i18n="enterName">${t('enterName')}</label>
+      <input class="form-input" id="nameInput" placeholder="${currentLang === 'ja' ? '例：探偵1' : 'Ex: Detective1'}" value="${ui.nameInput}">
       
-      <label style="font-size:12px;color:var(--ink-soft);">部屋番号（自分で決める）</label>
+      <label style="font-size:12px;color:var(--ink-soft);" data-i18n="customRoomCode">${t('customRoomCode')}</label>
       <div style="display:flex; gap:10px; align-items:center; margin-bottom:12px;">
         <label style="font-size:13px; display:flex; align-items:center; gap:6px; cursor:pointer;">
           <input type="checkbox" id="useCustomCode" ${ui.useCustomCode?'checked':''} style="width:18px; height:18px;">
-          自分で部屋番号を決める
+          ${currentLang === 'ja' ? '自分で部屋番号を決める' : 'Set custom room code'}
         </label>
       </div>
-      ${ui.useCustomCode ? `<input class="form-input code-input" id="customCodeInput" maxlength="6" placeholder="例：MYROOM" value="${ui.customCode}" style="text-transform:uppercase;">` : ''}
+      ${ui.useCustomCode ? `<input class="form-input code-input" id="customCodeInput" maxlength="6" placeholder="${currentLang === 'ja' ? '例：MYROOM' : 'Ex: MYROOM'}" value="${ui.customCode}" style="text-transform:uppercase;">` : ''}
       
-      <label style="font-size:12px;color:var(--ink-soft);">拡張ルール（容疑者と被害者の入れ替え）</label>
+      <label style="font-size:12px;color:var(--ink-soft);" data-i18n="expansionRule">${t('expansionRule')}</label>
       <div class="count-row" id="expRow"></div>
       <div class="center">
-        <button class="btn primary" id="doCreate">部屋を作成する</button>
+        <button class="btn primary" id="doCreate" data-i18n="create">${t('create')}</button>
       </div>
       ${ui.createError?`<div class="err-text center">${ui.createError}</div>`:''}
-      <div class="center" style="margin-top:14px;"><button class="rules-link" id="createRulesBtn">遊び方を見る</button> ・ <button class="btn small" id="back1">戻る</button></div>
+      <div class="center" style="margin-top:14px;"><button class="rules-link" id="createRulesBtn" data-i18n="howToPlay">${t('howToPlay')}</button> ・ <button class="btn small" id="back1" data-i18n="back">${t('back')}</button></div>
     </div>
   `;
   stage.appendChild(wrap);
@@ -928,7 +1170,7 @@ function renderCreate(){
   if(cci) cci.oninput = e=>{ ui.customCode=e.target.value.toUpperCase(); };
   const expRow = document.getElementById('expRow');
   if(expRow){
-    [{v:false,label:'使わない'},{v:true,label:'使う'}].forEach(opt=>{
+    [{v:false,label:t('dontUse')},{v:true,label:t('use')}].forEach(opt=>{
       const b=document.createElement('button');
       b.className='count-btn'+(ui.expansionChoice===opt.v?' active':'');
       b.textContent=opt.label;
@@ -945,17 +1187,17 @@ function renderJoin(){
   wrap.className='fade';
   wrap.innerHTML = `
     <div class="card">
-      <h2>部屋に入る</h2>
-      <p>ホストから伝えられた部屋番号を入力してください。</p>
-      <label style="font-size:12px;color:var(--ink-soft);">あなたの名前</label>
-      <input class="form-input" id="nameInput2" placeholder="例：探偵2" value="${ui.nameInput}">
-      <label style="font-size:12px;color:var(--ink-soft);">部屋番号</label>
-      <input class="form-input code-input" id="codeInput" maxlength="6" placeholder="部屋番号" value="${ui.codeInput}">
+      <h2>${currentLang === 'ja' ? '部屋に入る' : 'Join Room'}</h2>
+      <p>${currentLang === 'ja' ? 'ホストから伝えられた部屋番号を入力してください。' : 'Enter the room code provided by the host.'}</p>
+      <label style="font-size:12px;color:var(--ink-soft);" data-i18n="enterName">${t('enterName')}</label>
+      <input class="form-input" id="nameInput2" placeholder="${currentLang === 'ja' ? '例：探偵2' : 'Ex: Detective2'}" value="${ui.nameInput}">
+      <label style="font-size:12px;color:var(--ink-soft);" data-i18n="roomCode">${t('roomCode')}</label>
+      <input class="form-input code-input" id="codeInput" maxlength="6" placeholder="${currentLang === 'ja' ? '部屋番号' : 'Room Code'}" value="${ui.codeInput}">
       <div class="center">
-        <button class="btn primary" id="doJoin">この部屋に入る</button>
+        <button class="btn primary" id="doJoin" data-i18n="join">${t('join')}</button>
       </div>
       ${ui.joinError?`<div class="err-text center">${ui.joinError}</div>`:''}
-      <div class="center" style="margin-top:14px;"><button class="rules-link" id="joinRulesBtn">遊び方を見る</button> ・ <button class="btn small" id="back2">戻る</button></div>
+      <div class="center" style="margin-top:14px;"><button class="rules-link" id="joinRulesBtn" data-i18n="howToPlay">${t('howToPlay')}</button> ・ <button class="btn small" id="back2" data-i18n="back">${t('back')}</button></div>
     </div>
   `;
   stage.appendChild(wrap);
@@ -976,21 +1218,21 @@ function renderLobby(){
   wrap.className='fade';
   wrap.innerHTML = `
     <div class="card">
-      <h2>捜査本部 — 集合待ち</h2>
-      <p>この番号を仲間に伝えて、参加してもらいましょう。</p>
+      <h2>${currentLang === 'ja' ? '捜査本部 — 集合待ち' : 'Investigation HQ — Waiting'}</h2>
+      <p>${currentLang === 'ja' ? 'この番号を仲間に伝えて、参加してもらいましょう。' : 'Share this code with your friends to join.'}</p>
       <div class="room-code-display">${roomView.code}</div>
-      <p style="font-size:12px;color:var(--ink-soft);">拡張ルール（入れ替え）：${roomView.expansionEnabled?'使う':'使わない'}</p>
+      <p style="font-size:12px;color:var(--ink-soft);">${t('expansionRule')}：${roomView.expansionEnabled?t('use'):t('dontUse')}</p>
       <div id="lobbySeats"></div>
       <div class="player-list" id="pList"></div>
       <div class="center" style="margin-top:20px;">
         ${isHost
-          ? `<button class="btn primary" id="startBtn" ${roomView.players.length<2?'disabled':''}>捜査を開始する（${roomView.players.length}/5人）</button>`
-          : `<div class="wait-panel"><div>ホストの開始を待っています<span class="wait-dots"></span></div></div>`}
+          ? `<button class="btn primary" id="startBtn" ${roomView.players.length<2?'disabled':''}>${t('start')}（${roomView.players.length}/${t('maxPlayers')}）</button>`
+          : `<div class="wait-panel"><div>${t('waiting')}<span class="wait-dots"></span></div></div>`}
       </div>
-      ${isHost && roomView.players.length<2 ? `<p class="err-text center">最低2人集まると開始できます。</p>`:''}
-      <div class="center" style="margin-top:14px;"><button class="rules-link" id="lobbyRulesBtn">遊び方を見る</button> ・ <button class="btn small" id="leaveBtn">部屋を出る</button></div>
+      ${isHost && roomView.players.length<2 ? `<p class="err-text center">${t('minimumPlayers')}</p>`:''}
+      <div class="center" style="margin-top:14px;"><button class="rules-link" id="lobbyRulesBtn" data-i18n="howToPlay">${t('howToPlay')}</button> ・ <button class="btn small" id="leaveBtn" data-i18n="leave">${t('leave')}</button></div>
     </div>
-    <div class="conn-note live">直接接続中（P2P・リアルタイム反映）</div>
+    <div class="conn-note live">${currentLang === 'ja' ? '直接接続中（P2P・リアルタイム反映）' : 'Direct Connection (P2P・Real-time)'}</div>
   `;
   stage.appendChild(wrap);
   const lrb = document.getElementById('lobbyRulesBtn');
@@ -1005,7 +1247,7 @@ function renderLobby(){
       const row = document.createElement('div');
       row.className='player-row';
       row.style.borderLeftColor = p.color;
-      row.innerHTML = `<span class="dot" style="background:${p.color}"></span><span>${p.name}</span>${isHost&&i===0?'<span class="tag">ホスト</span>':''}${i===myPlayerIndex?'<span class="tag">あなた</span>':''}${p.connected===false?'<span class="tag" style="color:var(--blood);">切断中</span>':''}`;
+      row.innerHTML = `<span class="dot" style="background:${p.color}"></span><span>${p.name}</span>${isHost&&i===0?'<span class="tag">'+(currentLang === 'ja' ? 'ホスト' : 'Host')+'</span>':''}${i===myPlayerIndex?'<span class="tag">'+(currentLang === 'ja' ? 'あなた' : 'You')+'</span>':''}${p.connected===false?'<span class="tag" style="color:var(--blood);">'+(currentLang === 'ja' ? '切断中' : 'Disconnected')+'</span>':''}`;
       pl.appendChild(row);
     });
   }
@@ -1020,8 +1262,8 @@ function buildScoreboard(highlightIdx){
     const el = document.createElement('div');
     el.className='score-chip'+(i===highlightIdx?' turn':'');
     el.style.setProperty('--pc', p.color);
-    el.innerHTML = `<span class="sc-name" style="color:${p.color}">${p.name}${i===myPlayerIndex?'（あなた）':''}${p.connected===false?' <span style=\"color:var(--blood);\">⚠︎切断中</span>':''}</span>
-      <span class="sc-nums"><span>手持ち ${p.faceUp}</span><span>失敗 ${p.faceDown}</span></span>`;
+    el.innerHTML = `<span class="sc-name" style="color:${p.color}">${p.name}${i===myPlayerIndex? (currentLang === 'ja' ? '（あなた）' : ' (You)') :''}${p.connected===false?' <span style=\"color:var(--blood);\">⚠︎'+(currentLang === 'ja' ? '切断中' : 'Disconnected')+'</span>':''}</span>
+      <span class="sc-nums"><span>${currentLang === 'ja' ? '手持ち' : 'Hand'} ${p.faceUp}</span><span>${currentLang === 'ja' ? '失敗' : 'Fail'} ${p.faceDown}</span></span>`;
     sb.appendChild(el);
   });
   return sb;
@@ -1066,7 +1308,7 @@ function buildSeatTable(opts){
       const flipped = val!==null && val!==undefined;
       cardHtml = `<div class="seat-card${flipped?' flipped':''}">${flipped ? formatFlipValue(val) : '？'}</div>`;
     }
-    seat.innerHTML = `<div class="avatar" style="background:${p.color}">${p.name.slice(0,1)}</div><div class="seat-name">${p.name}${offset===0&&myPlayerIndex>=0?'（あなた）':''}</div>${cardHtml}`;
+    seat.innerHTML = `<div class="avatar" style="background:${p.color}">${p.name.slice(0,1)}</div><div class="seat-name">${p.name}${offset===0&&myPlayerIndex>=0? (currentLang === 'ja' ? '（あなた）' : ' (You)') :''}</div>${cardHtml}`;
     wrap.appendChild(seat);
   }
   return wrap;
@@ -1092,10 +1334,10 @@ function buildLobbySeatTable(){
     const seat = document.createElement('div');
     if(p){
       seat.className='seat'+(offset===0?' me':'');
-      seat.innerHTML = `<div class="avatar" style="background:${p.color}">${p.name.slice(0,1)}</div><div class="seat-name">${p.name}${offset===0?'（あなた）':''}</div>`;
+      seat.innerHTML = `<div class="avatar" style="background:${p.color}">${p.name.slice(0,1)}</div><div class="seat-name">${p.name}${offset===0? (currentLang === 'ja' ? '（あなた）' : ' (You)') :''}</div>`;
     } else {
       seat.className='seat empty';
-      seat.innerHTML = `<div class="avatar">−</div><div class="seat-name">空席</div>`;
+      seat.innerHTML = `<div class="avatar">−</div><div class="seat-name">${currentLang === 'ja' ? '空席' : 'Empty'}</div>`;
     }
     seat.style.left=pos.x+'%'; seat.style.top=pos.y+'%';
     wrap.appendChild(seat);
@@ -1109,13 +1351,13 @@ function appendLeaveLink(wrap){
   p.style.cssText='margin-top:18px;';
   const rulesBtn = document.createElement('button');
   rulesBtn.className='rules-link';
-  rulesBtn.textContent='遊び方を見る';
+  rulesBtn.textContent = t('howToPlay');
   rulesBtn.onclick = openRulesModal;
   const sep = document.createTextNode(' ・ ');
   const leaveBtn = document.createElement('button');
   leaveBtn.className='btn small';
   leaveBtn.style.opacity='.6';
-  leaveBtn.textContent='退出する';
+  leaveBtn.textContent = t('leave');
   leaveBtn.onclick = leaveRoom;
   p.appendChild(rulesBtn);
   p.appendChild(sep);
@@ -1131,7 +1373,7 @@ function buildMyCardsPanel(){
   
   const panel = document.createElement('div');
   panel.className='my-cards-panel';
-  panel.innerHTML = `<h3>確認済みの人物（ターン中ずっと表示）</h3>`;
+  panel.innerHTML = `<h3>${currentLang === 'ja' ? '確認済みの人物（ターン中ずっと表示）' : 'Confirmed People (Displayed Throughout Turn)'}</h3>`;
   
   const display = document.createElement('div');
   display.className='cards-display';
@@ -1141,8 +1383,8 @@ function buildMyCardsPanel(){
     display.innerHTML += `
       <div class="mini-card">
         <div class="mini-head${flipClass}">${formatFlipValue(myCard)}</div>
-        <div class="mini-body">人</div>
-        <div class="mini-label">あなた</div>
+        <div class="mini-body">${currentLang === 'ja' ? '人' : 'P'}</div>
+        <div class="mini-label">${currentLang === 'ja' ? 'あなた' : 'You'}</div>
       </div>
     `;
   }
@@ -1151,13 +1393,13 @@ function buildMyCardsPanel(){
     display.innerHTML += `
       <div class="mini-card">
         <div class="mini-head${flipClass}">${formatFlipValue(neighborCard)}</div>
-        <div class="mini-body">人</div>
+        <div class="mini-body">${currentLang === 'ja' ? '人' : 'P'}</div>
         <div class="mini-label">${roomView.players[neighbor].name}</div>
       </div>
     `;
   }
   if(myCard === null && neighborCard === null){
-    display.innerHTML = `<p style="color:var(--ink-soft); font-size:12px;">アリバイ確認で表示されます</p>`;
+    display.innerHTML = `<p style="color:var(--ink-soft); font-size:12px;">${currentLang === 'ja' ? 'アリバイ確認で表示されます' : 'Will be displayed after alibi check'}</p>`;
   }
   
   panel.appendChild(display);
@@ -1167,7 +1409,7 @@ function buildMyCardsPanel(){
 function buildPeekedSuspectsPanel(){
   const panel = document.createElement('div');
   panel.className='peeked-suspects-panel';
-  panel.innerHTML = `<h3>確認した容疑者（ターン中ずっと表示）</h3>`;
+  panel.innerHTML = `<h3>${currentLang === 'ja' ? '確認した容疑者（ターン中ずっと表示）' : 'Confirmed Suspects (Displayed Throughout Turn)'}</h3>`;
   
   const display = document.createElement('div');
   display.className='peeked-display';
@@ -1180,13 +1422,13 @@ function buildPeekedSuspectsPanel(){
       display.innerHTML += `
         <div class="peeked-card">
           <div class="p-head${flipClass}">${valueText}</div>
-          <div class="p-body">人</div>
+          <div class="p-body">${currentLang === 'ja' ? '人' : 'P'}</div>
           <div class="p-label">${label}</div>
         </div>
       `;
     });
   } else {
-    display.innerHTML = `<p style="color:var(--ink-soft); font-size:12px;">容疑者カードをタッチして確認してください</p>`;
+    display.innerHTML = `<p style="color:var(--ink-soft); font-size:12px;">${currentLang === 'ja' ? '容疑者カードをタッチして確認してください' : 'Touch suspect cards to confirm'}</p>`;
   }
   
   panel.appendChild(display);
@@ -1201,16 +1443,16 @@ function renderAlibi(){
 
   const wrap = document.createElement('div');
   wrap.className='fade';
-  wrap.innerHTML = `<div class="round-header"><span>第 ${roomView.round} ラウンド — 準備</span><span>確認済み ${roomView.alibiAcked.filter(Boolean).length} / ${n}</span></div>`;
+  wrap.innerHTML = `<div class="round-header"><span>${t('round')} ${roomView.round} ${t('alibi')}</span><span>${currentLang === 'ja' ? '確認済み' : 'Confirmed'} ${roomView.alibiAcked.filter(Boolean).length} / ${n}</span></div>`;
 
   const card = document.createElement('div');
   card.className='card';
   if(acked){
-    card.innerHTML = `<h2>アリバイ確認 — 完了</h2><p>他のプレイヤーの確認が終わるのを待っています…</p>`;
+    card.innerHTML = `<h2>${currentLang === 'ja' ? 'アリバイ確認 — 完了' : 'Alibi Check — Complete'}</h2><p>${currentLang === 'ja' ? '他のプレイヤーの確認が終わるのを待っています…' : 'Waiting for other players to finish checking…'}</p>`;
   } else if(!alibiLocal.shown){
-    card.innerHTML = `<h2>アリバイ確認</h2><p>この事件とは無関係な人物のタイルが、あなたと隣に座る <strong>${roomView.players[neighbor].name}</strong> にそれぞれ配られている。両方を確かめよう。容疑者の数字を推理する除外情報になる。</p>`;
+    card.innerHTML = `<h2>${currentLang === 'ja' ? 'アリバイ確認' : 'Alibi Check'}</h2><p>${currentLang === 'ja' ? `この事件とは無関係な人物のタイルが、あなたと隣に座る <strong>${roomView.players[neighbor].name}</strong> にそれぞれ配られている。両方を確かめよう。容疑者の数字を推理する除外情報になる。` : `Tiles of "people unrelated to this case" are dealt to you and <strong>${roomView.players[neighbor].name}</strong> sitting next to you. Check both. This becomes exclusion information for deducing suspect numbers.`}</p>`;
   } else {
-    card.innerHTML = `<h2>アリバイ確認</h2><p><strong>${roomView.players[neighbor].name}</strong> の手元がめくれた。これで2人分の「無関係な人物」が分かった——場の4体の中には含まれない数字だ。</p>`;
+    card.innerHTML = `<h2>${currentLang === 'ja' ? 'アリバイ確認' : 'Alibi Check'}</h2><p>${currentLang === 'ja' ? `<strong>${roomView.players[neighbor].name}</strong> の手元がめくれた。これで2人分の「無関係な人物」が分かった——場の4体の中には含まれない数字だ。` : `<strong>${roomView.players[neighbor].name}</strong>'s tiles revealed. Now you know 2 "unrelated people" — numbers not among the 4 at the scene.`}</p>`;
   }
   wrap.appendChild(card);
 
@@ -1223,16 +1465,16 @@ function renderAlibi(){
     highlightSet: acked ? new Set() : new Set([myPlayerIndex, neighbor]),
     dim: !acked,
     cardFor: acked ? null : cardFor,
-    linkLabel: !acked ? '隣のアリバイ' : ''
+    linkLabel: !acked ? (currentLang === 'ja' ? '隣のアリバイ' : 'Neighbor\'s Alibi') : ''
   }));
 
   const actionArea = document.createElement('div');
   actionArea.className='center';
   if(!acked){
     if(!alibiLocal.shown){
-      actionArea.innerHTML = `<button class="btn" id="viewAlibi">手元の人物を確認する</button>`;
+      actionArea.innerHTML = `<button class="btn" id="viewAlibi">${currentLang === 'ja' ? '手元の人物を確認する' : 'Check Your Tiles'}</button>`;
     } else {
-      actionArea.innerHTML = `<button class="btn primary" id="closeAlibi">伏せて次へ</button>`;
+      actionArea.innerHTML = `<button class="btn primary" id="closeAlibi">${currentLang === 'ja' ? '伏せて次へ' : 'Hide & Next'}</button>`;
     }
   }
   wrap.appendChild(actionArea);
@@ -1269,7 +1511,7 @@ function renderTurns(){
 
   const wrap = document.createElement('div');
   wrap.className='fade';
-  wrap.innerHTML = `<div class="round-header"><span>第 ${roomView.round} ラウンド</span><span>手番 ${roomView.currentPos+1} / ${roomView.players.length}</span></div>`;
+  wrap.innerHTML = `<div class="round-header"><span>${t('round')} ${roomView.round} ${t('turn')}</span><span>${t('turn')} ${roomView.currentPos+1} / ${roomView.players.length}</span></div>`;
   wrap.appendChild(buildSeatTable({ mini:true, highlightSet:new Set([curIdx]), dim:true }));
   wrap.appendChild(buildScoreboard(curIdx));
   
@@ -1288,7 +1530,7 @@ function renderTurns(){
 
   const victimCard = document.createElement('div');
   victimCard.className='victim-card';
-  victimCard.textContent = '被 害 者 （伏 せ）';
+  victimCard.textContent = `${currentLang === 'ja' ? '被 害 者' : 'V I C T I M'} （${currentLang === 'ja' ? '伏 せ' : 'Hidden'}）`;
   wrap.appendChild(victimCard);
 
   const suspectsRow = document.createElement('div');
@@ -1307,18 +1549,21 @@ function renderTurns(){
     card.innerHTML = `
       <div class="s-label">${labels[i]}</div>
       <div class="head${flipClass}">${isPeeked ? formatFlipValue(peekedValue) : ''}</div>
-      <div class="body">${isPeeked ? '確認済' : '？'}</div>
-      ${roomView.unseenIdx===i?'<div class="unseen-badge">見なかった</div>':''}
+      <div class="body">${isPeeked ? (currentLang === 'ja' ? '確認済' : 'Confirmed') : '？'}</div>
+      ${roomView.unseenIdx===i?'<div class="unseen-badge">'+(currentLang === 'ja' ? '見なかった' : 'Unseen')+'</div>':''}
       <div class="chip-stack">${roomView.chipsAt[i].map(pi=>`<span class="chip-dot" style="background:${roomView.players[pi].color}">${roomView.players[pi].name.slice(0,1)}</span>`).join('')}</div>
     `;
     
     if(isMyTurn && roomView.currentPos===0 && !tl.evidenceSeen && !isPeeked){
       card.classList.add('clickable');
       card.onclick = ()=>{
-        if(tl.chosenTwo.size < 2 && !tl.chosenTwo.has(i)){
+        // トグル機能：選択済みなら解除、未選択なら追加（最大2人まで）
+        if(tl.chosenTwo.has(i)){
+          tl.chosenTwo.delete(i);
+        } else if(tl.chosenTwo.size < 2){
           tl.chosenTwo.add(i);
-          render();
         }
+        render();
       };
     }
     
@@ -1329,7 +1574,7 @@ function renderTurns(){
   if(!isMyTurn){
     const wp = document.createElement('div');
     wp.className='wait-panel';
-    wp.innerHTML = `<p style="font-size:13px;color:var(--ink-soft);">今の手番</p><div class="who" style="color:${roomView.players[curIdx].color}">${roomView.players[curIdx].name}</div><p style="font-size:12.5px;color:var(--ink-soft);">証言を聞いています<span class="wait-dots"></span></p>`;
+    wp.innerHTML = `<p style="font-size:13px;color:var(--ink-soft);">${currentLang === 'ja' ? '今の手番' : 'Current Turn'}</p><div class="who" style="color:${roomView.players[curIdx].color}">${roomView.players[curIdx].name}</div><p style="font-size:12.5px;color:var(--ink-soft);">${currentLang === 'ja' ? '証言を聞いています' : 'Listening to testimony'}<span class="wait-dots"></span></p>`;
     wrap.appendChild(wp);
     stage.appendChild(wrap);
     return;
@@ -1345,10 +1590,14 @@ function renderTurns(){
       const remaining = 2 - tl.chosenTwo.size;
       actionArea.innerHTML = `
         <p style="font-size:13px;color:var(--ink-soft);max-width:420px;margin:0 auto 14px;">
-          あなたは第一発見者。<b>容疑者カードをタッチして</b>、好きな2人の数字を確かめよ。<br>
-          <span style="color:var(--blood); font-weight:600;">残り ${remaining} 人選択可能</span>
+          ${currentLang === 'ja' ? 
+            `あなたは第一発見者。<b>容疑者カードをタッチして</b>、好きな2人の数字を確かめよ。<br>
+            <span style="color:var(--blood); font-weight:600;">残り ${remaining} 人選択可能</span>` :
+            `You are the first detective. <b>Touch suspect cards</b> to check 2 people's numbers.<br>
+            <span style="color:var(--blood); font-weight:600;">${remaining} more can be selected</span>`
+          }
         </p>
-        ${tl.chosenTwo.size===2 ? `<button class="btn primary" id="confirmPeek">確認完了</button>` : ''}
+        ${tl.chosenTwo.size===2 ? `<button class="btn primary" id="confirmPeek">${t('confirm')}</button>` : ''}
       `;
       wrap.appendChild(actionArea);
       stage.appendChild(wrap);
@@ -1367,9 +1616,12 @@ function renderTurns(){
     } else {
       actionArea.innerHTML = `
         <p style="font-size:13px;color:var(--ink-soft);max-width:420px;margin:0 auto 14px;">
-          前の人が犯人だと示した場所以外、残り2人の<b>容疑者カードをタッチして</b>数字を確認せよ。
+          ${currentLang === 'ja' ? 
+            '前の人が犯人だと示した場所以外、残り2人の<b>容疑者カードをタッチして</b>数字を確認せよ。' :
+            'Except where the previous player indicated as culprit, <b>touch the remaining 2 suspect cards</b> to check numbers.'
+          }
         </p>
-        <button class="btn small" id="viewEvidence">証拠を確認する</button>
+        <button class="btn small" id="viewEvidence">${t('viewEvidence')}</button>
       `;
       wrap.appendChild(actionArea);
       stage.appendChild(wrap);
@@ -1388,7 +1640,7 @@ function renderTurns(){
   }
 
   if(isStart && roomView.expansionEnabled && !tl.swapDecided){
-    actionArea.innerHTML = `<p style="font-size:13px;color:var(--ink-soft);max-width:420px;margin:0 auto 14px;">拡張ルール：望むなら、容疑者1人と被害者のタイルを入れ替えられる（数字は公開されない）。</p>
+    actionArea.innerHTML = `<p style="font-size:13px;color:var(--ink-soft);max-width:420px;margin:0 auto 14px;">${currentLang === 'ja' ? '拡張ルール：望むなら、容疑者1人と被害者のタイルを入れ替えられる（数字は公開されない）。' : 'Expansion Rule: If desired, you can swap 1 suspect tile with the victim tile (number not revealed).'}</p>
       <div class="row" style="justify-content:center;" id="swapButtons"></div>`;
     wrap.appendChild(actionArea);
     stage.appendChild(wrap);
@@ -1397,12 +1649,12 @@ function renderTurns(){
       for(let i=0;i<3;i++){
         const b=document.createElement('button');
         b.className='btn small';
-        b.textContent = labels[i]+'と入れ替える';
+        b.textContent = `${labels[i]} ${t('swap')}`;
         b.onclick=async ()=>{ const {error}=await Net.swap(i); if(error) return; tl.swapDecided=true; render(); };
         sb.appendChild(b);
       }
       const skip=document.createElement('button');
-      skip.className='btn small'; skip.textContent='入れ替えない';
+      skip.className='btn small'; skip.textContent=t('noSwap');
       skip.onclick=async ()=>{ const {error}=await Net.swap('skip'); if(error) return; tl.swapDecided=true; render(); };
       sb.appendChild(skip);
     }
@@ -1423,11 +1675,11 @@ function renderTurns(){
   });
 
   if(tl.guessChoice===null || tl.guessChoice===undefined){
-    actionArea.innerHTML = `<p style="font-size:13px;color:var(--ink-soft);">誰が犯人だと思うか、上の容疑者をタップしてチップを置け。<b>選択すると光って強調されます</b>。</p>`;
+    actionArea.innerHTML = `<p style="font-size:13px;color:var(--ink-soft);">${currentLang === 'ja' ? '誰が犯人だと思うか、上の容疑者をタップしてチップを置け。<b>選択すると光って強調されます</b>。' : 'Tap a suspect above to place your chip on who you think is the culprit. <b>Selection will glow for emphasis</b>.'}</p>`;
   } else {
     const b = document.createElement('button');
     b.className='btn primary';
-    b.textContent = (roomView.currentPos===roomView.players.length-1) ? '全員の証言が出そろった — 真相を確かめる' : '決定して次の人へ';
+    b.textContent = (roomView.currentPos===roomView.players.length-1) ? t('finalTruth') : t('next');
     b.onclick = async ()=>{
       const guessChoice = tl.guessChoice;
       const { error } = await Net.guess(guessChoice);
@@ -1443,43 +1695,44 @@ function renderTurns(){
 function openRulesModal(){
   const overlay = document.createElement('div');
   overlay.className='modal-overlay';
+  const rules = t('rules');
   overlay.innerHTML = `
     <div class="modal-box rules-box">
-      <h3>遊び方 — 藪の中（新版 2-5人）</h3>
+      <h3>${rules.title}</h3>
 
-      <h4>概要</h4>
-      <p>竹林で一体の骸が見つかった。現場には「被害者」1枚と「容疑者」3枚(容疑者A・B・C)の数字タイルが伏せられている。プレイヤーは<b>2〜5人</b>。全員が少しずつ違う手がかりを持ち寄り、証言を重ねながら「本当の犯人」を推理する。</p>
+      <h4>${rules.overview}</h4>
+      <p>${rules.overviewText}</p>
 
-      <h4>① アリバイ確認フェーズ</h4>
-      <p>各ラウンドの最初に、現場の4枚とは別の「事件と無関係な人物」のタイルが、自分と隣の人にそれぞれ配られる。両方を確認すると、「少なくともこの2つの数字は容疑者・被害者には含まれない」という除外情報が手に入る。<b>このカードはターン中ずっと画面に表示され続ける</b>ので、忘れません。全員が確認を終えると次のフェーズへ進む。</p>
+      <h4>${rules.alibiPhase}</h4>
+      <p>${rules.alibiText}</p>
 
-      <h4>② 証言フェーズ（手番）</h4>
+      <h4>${rules.testimonyPhase}</h4>
       <ul>
-        <li><b>第一発見者（一番手）</b>：<b>容疑者カードを直接タッチして</b>、好きな2人の数字を覗く。残り1人は「見なかった」として周囲に伝わる（数字自体は非公開）。<b>確認した数字はカード自体に表示され、ターン中ずっと見える</b>。拡張ルール使用時は、被害者と容疑者1人のタイルを入れ替えるかどうかも選べる（数字は公開されない）。最後に、犯人だと思う容疑者1人にチップを置く。</li>
-        <li><b>2番手以降</b>：直前の人がチップを置いた容疑者を除く、残り2人の数字を確認できる。同じように、犯人だと思う容疑者にチップを置く。</li>
+        <li><b>${rules.firstDetective}</b>：${rules.firstDetectiveText}</li>
+        <li><b>${rules.otherPlayers}</b>：${rules.otherPlayersText}</li>
       </ul>
-      <p><b>容疑者を選択すると、カードが光って強調表示</b>されます。全員がチップを置き終えたら、真相解明フェーズに移る。</p>
+      <p>${rules.highlight}</p>
 
-      <h4>③ 真犯人の見分け方</h4>
+      <h4>${rules.culpritRule}</h4>
       <ul>
-        <li>容疑者3人の中に「<b style="color:var(--blood);">↓5↑</b>」がいる場合 → 最も<b>小さい</b>数字の容疑者が真犯人。</li>
-        <li>「<b style="color:var(--blood);">↓5↑</b>」がいない場合 → 最も<b>大きい</b>数字の容疑者が真犯人。</li>
-        <li>3人とも白紙の場合 → 犯人なし（ありえない組み合わせ）。</li>
+        <li>${rules.hasFive}</li>
+        <li>${rules.noFive}</li>
+        <li>${rules.noCulprit}</li>
       </ul>
-      <div class="rule-note"><b style="color:var(--blood);">「↓5↑」</b>は特別な数字（flip）です。赤く光って表示され、ゲームの勝敗を大きく左右します。</div>
+      <div class="rule-note">${rules.flipNote}</div>
 
-      <h4>④ チップの精算</h4>
+      <h4>${rules.chipSettlement}</h4>
       <ul>
-        <li>真犯人にチップを置いていた人は、チップが無事に戻ってくる。</li>
-        <li>外れた容疑者にチップを置いていた人たちは、全員「手持ち」を1枚失う。さらに、その山に<b>最後に</b>チップを置いた人が、山にあったチップ全部を「失敗チップ」としてまとめて引き取る。</li>
+        <li>${rules.correctGuess}</li>
+        <li>${rules.wrongGuess}</li>
       </ul>
 
-      <h4>⑤ 終了と勝敗</h4>
-      <p>ラウンド終了時に、誰かの「失敗チップ」が8枚以上、または「手持ち」が0枚になっていたら、そこで捜査終了。「失敗チップ」が最も少ない人が勝者。そうでなければ、次のラウンドへ進む（第一発見者は一人ずつ交代する）。</p>
+      <h4>${rules.endGame}</h4>
+      <p>${rules.endGameText}</p>
 
-      <div class="rule-note">ホストの端末がゲーム全体の進行を管理し、他の人には見せてよい情報だけを送るので、隠すべき数字は自分の画面にしか表示されません。</div>
+      <div class="rule-note">${rules.note}</div>
 
-      <div class="center" style="margin-top:20px;"><button class="btn primary small" id="closeRules">閉じる</button></div>
+      <div class="center" style="margin-top:20px;"><button class="btn primary small" id="closeRules">${rules.close}</button></div>
     </div>`;
   document.body.appendChild(overlay);
   const cr = document.getElementById('closeRules');
@@ -1492,7 +1745,7 @@ function openPeekModal(valuesMap, onClose){
   const indices = Object.keys(valuesMap).map(Number).sort();
   overlay.innerHTML = `
     <div class="modal-box">
-      <h3>確認した証拠</h3>
+      <h3>${currentLang === 'ja' ? '確認した証拠' : 'Confirmed Evidence'}</h3>
       <div class="peek-values">
         ${indices.map(i=>{
           const val = valuesMap[i];
@@ -1500,8 +1753,8 @@ function openPeekModal(valuesMap, onClose){
           return `<div class="peek-col"><div class="cap">${labels[i]}</div><div class="peek-value${flipClass}">${formatFlipValue(val)}</div></div>`;
         }).join('')}
       </div>
-      <p style="font-size:12px;color:var(--ink-soft);margin-bottom:18px;">画面を他の人に見られないよう気をつけて。</p>
-      <button class="btn primary small" id="closePeek">伏せて次へ</button>
+      <p style="font-size:12px;color:var(--ink-soft);margin-bottom:18px;">${currentLang === 'ja' ? '画面を他の人に見られないよう気をつけて。' : 'Be careful not to let others see your screen.'}</p>
+      <button class="btn primary small" id="closePeek">${currentLang === 'ja' ? '伏せて次へ' : 'Hide & Next'}</button>
     </div>`;
   document.body.appendChild(overlay);
   const cp = document.getElementById('closePeek');
@@ -1516,13 +1769,13 @@ function renderReveal(){
   const s = roomView.center.suspects;
   const hasFive = s.includes(5);
   let explain;
-  if(culprit===null||culprit===undefined){ explain='ありえない組み合わせだった。'; }
-  else if(hasFive){ explain = `容疑者の中に「↓5↑」が含まれているため、最も小さい数字を持つ ${labels[culprit]} が真犯人だった。`; }
-  else { explain = `最も大きい数字を持つ ${labels[culprit]} が真犯人だった。`; }
+  if(culprit===null||culprit===undefined){ explain = currentLang === 'ja' ? 'ありえない組み合わせだった。' : 'Impossible combination.'; }
+  else if(hasFive){ explain = currentLang === 'ja' ? `容疑者の中に「↓5↑」が含まれているため、最も小さい数字を持つ ${labels[culprit]} が真犯人だった。` : `${labels[culprit]} with the smallest number is the true culprit because "↓5↑" is among the suspects.`; }
+  else { explain = currentLang === 'ja' ? `最も大きい数字を持つ ${labels[culprit]} が真犯人だった。` : `${labels[culprit]} with the largest number is the true culprit.`; }
 
   const wrap = document.createElement('div');
   wrap.className='fade';
-  wrap.innerHTML = `<div class="round-header"><span>第 ${roomView.round} ラウンド — 真相解明</span><span>被害者：${roomView.center.victim==='blank'?'白紙':formatFlipValue(roomView.center.victim)}</span></div>`;
+  wrap.innerHTML = `<div class="round-header"><span>${t('round')} ${roomView.round} ${t('reveal')}</span><span>${t('victim')}：${roomView.center.victim==='blank'? (currentLang === 'ja' ? '白紙' : 'Blank') :formatFlipValue(roomView.center.victim)}</span></div>`;
 
   const suspectsRow = document.createElement('div');
   suspectsRow.className='suspects-row';
@@ -1533,7 +1786,7 @@ function renderReveal(){
     card.innerHTML = `
       <div class="s-label">${labels[i]}</div>
       <div class="head${flipClass}">${formatFlipValue(s[i])}</div>
-      <div class="body">人</div>
+      <div class="body">${currentLang === 'ja' ? '人' : 'P'}</div>
       <div class="chip-stack">${roomView.chipsAt[i].map(pi=>`<span class="chip-dot" style="background:${roomView.players[pi].color}">${roomView.players[pi].name.slice(0,1)}</span>`).join('')}</div>
     `;
     suspectsRow.appendChild(card);
@@ -1564,11 +1817,11 @@ function renderReveal(){
   if(isHost){
     const b=document.createElement('button');
     b.className='btn primary';
-    b.textContent = anyOver ? '最終結果を見る' : '次のラウンドへ';
+    b.textContent = anyOver ? (currentLang === 'ja' ? '最終結果を見る' : 'View Final Results') : (currentLang === 'ja' ? '次のラウンドへ' : 'Next Round');
     b.onclick = hostAdvanceAfterReveal;
     btnArea.appendChild(b);
   } else {
-    btnArea.innerHTML = `<p style="font-size:12.5px;color:var(--ink-soft);">ホストが次に進めるのを待っています<span class="wait-dots"></span></p>`;
+    btnArea.innerHTML = `<p style="font-size:12.5px;color:var(--ink-soft);">${currentLang === 'ja' ? 'ホストが次に進めるのを待っています' : 'Waiting for host to proceed'}<span class="wait-dots"></span></p>`;
   }
   wrap.appendChild(btnArea);
   stage.appendChild(wrap);
@@ -1583,21 +1836,21 @@ function renderFinal(){
   const wrap = document.createElement('div');
   wrap.className='fade';
   wrap.innerHTML = `
-    <div class="card"><h2>捜査終了</h2><p>全 ${roomView.round} ラウンドを終え、事件簿は閉じられた。</p></div>
+    <div class="card"><h2>${t('gameEnd')}</h2><p>${currentLang === 'ja' ? `全 ${roomView.round} ラウンドを終え、事件簿は閉じられた。` : `All ${roomView.round} rounds completed. The case is closed.`}</p></div>
     <div class="card">
-      <h2>最終成績</h2>
+      <h2>${currentLang === 'ja' ? '最終成績' : 'Final Results'}</h2>
       ${roomView.players.slice().sort((a,b)=>a.faceDown-b.faceDown).map(p=>`
         <div class="score-chip" style="width:100%;margin-bottom:8px;border-left:4px solid ${p.color};">
-          <span class="sc-name" style="color:${p.color}">${p.name}${winners.includes(p)?' ★勝者':''}</span>
-          <span class="sc-nums"><span>手持ち ${p.faceUp}</span><span>失敗 ${p.faceDown}</span></span>
+          <span class="sc-name" style="color:${p.color}">${p.name}${winners.includes(p)? (currentLang === 'ja' ? ' ★勝者' : ' ★Winner') :''}</span>
+          <span class="sc-nums"><span>${currentLang === 'ja' ? '手持ち' : 'Hand'} ${p.faceUp}</span><span>${currentLang === 'ja' ? '失敗' : 'Fail'} ${p.faceDown}</span></span>
         </div>`).join('')}
-      ${mostDeceived.length?`<p style="margin-top:14px;">「一番だまされた人」：${mostDeceived.map(p=>p.name).join('・')}</p>`:''}
-      ${worstGuess.length?`<p>「一番推理を外した人」：${worstGuess.map(p=>p.name).join('・')}</p>`:''}
+      ${mostDeceived.length?`<p style="margin-top:14px;">${currentLang === 'ja' ? '「一番だまされた人」' : '"Most Deceived"' }：${mostDeceived.map(p=>p.name).join('・')}</p>`:''}
+      ${worstGuess.length?`<p>${currentLang === 'ja' ? '「一番推理を外した人」' : '"Worst Guesser"' }：${worstGuess.map(p=>p.name).join('・')}</p>`:''}
     </div>
     <div class="center" style="margin-top:24px;">
-      ${isHost ? `<button class="btn primary" id="playAgain">もう一度、同じ面子で</button>` : `<p style="font-size:12.5px;color:var(--ink-soft);">ホストの操作を待っています…</p>`}
-      <button class="btn" id="leaveFinal" style="margin-left:10px;">部屋を出る</button>
-      <div style="margin-top:10px;"><button class="rules-link" id="finalRulesBtn">遊び方を見る</button></div>
+      ${isHost ? `<button class="btn primary" id="playAgain">${t('playAgain')}</button>` : `<p style="font-size:12.5px;color:var(--ink-soft);">${currentLang === 'ja' ? 'ホストの操作を待っています…' : 'Waiting for host…'}</p>`}
+      <button class="btn" id="leaveFinal" style="margin-left:10px;">${t('leave')}</button>
+      <div style="margin-top:10px;"><button class="rules-link" id="finalRulesBtn">${t('howToPlay')}</button></div>
     </div>
   `;
   stage.appendChild(wrap);
@@ -1634,6 +1887,8 @@ function initChat(){
   });
 }
 
+// 初期表示
+updateTexts();
 render();
 initChat();
 })();

@@ -1068,12 +1068,18 @@ function joinRoom(){
 }
 
 function leaveRoom(){
+  const confirmMsg = currentLang === 'ja' ? 
+    '本当に退出しますか？\nホストの場合、ゲーム状態は保存され、後で復元できます。' :
+    'Are you sure you want to leave?\nIf you are the host, the game state will be saved and can be restored later.';
+  
+  if(!confirm(confirmMsg)) return;
+  
   try{ if(hostConn) hostConn.close(); }catch(e){}
   try{ if(peer) peer.destroy(); }catch(e){}
   isHost=false; peer=null; hostConn=null; connections=new Map(); room=null; roomView=null; myPlayerIndex=-1;
   reqCounter=0; pending=new Map(); turnLocal=null; alibiLocal={round:null,shown:false,values:null};
   chatMessages = [];
-  clearGameState();
+  // clearGameState() は呼ばない → 保存は残る
   ui = { screen:'title', nameInput:'', codeInput:'', customCode:'', useCustomCode:false, expansionChoice:false, joinError:null, createError:null, disconnected:false };
   render();
 }
